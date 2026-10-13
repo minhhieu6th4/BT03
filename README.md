@@ -2,6 +2,9 @@
 
 **UET Algorithm Battle** là nền tảng tổ chức thi đấu thuật toán trí tuệ nhân tạo (Bot vs Bot) dựa trên bộ môn cờ chiến thuật **Kéo - Búa - Bao (Rock - Paper - Scissors) trên bàn cờ 9x9**. Hệ thống cung cấp môi trường lập trình, kiểm duyệt bảo mật mã nguồn tự động (Static AST & Docker Sandbox), phòng thi đấu trực tuyến 1v1, bảng xếp hạng toàn server và hệ thống tổ chức giải đấu **Knockout (Loại trực tiếp)** hoàn chỉnh.
 
+> 🌐 **Link truy cập trực tuyến (Khác mạng / Internet qua Cloudflare Tunnel)**:  
+> 👉 **[https://blah-biology-fcc-ceo.trycloudflare.com/index.html](https://blah-biology-fcc-ceo.trycloudflare.com/index.html)**
+
 ---
 
 ## 🌟 Tính Năng Nổi Bật
@@ -142,9 +145,10 @@ pip install -r requirements.txt
    - ⚙️ **Backend API Root**: `http://127.0.0.1:5000/`
    - 📄 **Tài liệu Swagger UI**: `http://127.0.0.1:5000/docs`
 
-### 🌍 Truy cập từ máy khác (Cùng Wi-Fi / khác mạng)
+### 🌍 Truy cập từ máy khác (Cùng Wi-Fi / Khác mạng)
+- **Khác mạng Wi-Fi (Qua Internet — Cloudflare Tunnel)**:
+  - Truy cập trực tiếp qua đường dẫn: **[https://blah-biology-fcc-ceo.trycloudflare.com/index.html](https://blah-biology-fcc-ceo.trycloudflare.com/index.html)**
 - **Cùng mạng Wi-Fi / LAN**: Chạy `run_all.ps1` để xem địa chỉ IP LAN của máy chủ (ví dụ `http://192.168.1.15:5500/frontend/index.html`). Đảm bảo mở cổng `5000` và `5500` trên Windows Firewall nếu bị chặn.
-- **Khác mạng Wi-Fi (Qua Internet)**: Sử dụng tính năng **Ports (Port Forwarding)** có sẵn trong VS Code, forward 2 cổng `5000` và `5500` ở chế độ **Public** để lấy đường link truy cập từ bất kỳ đâu.
 
 ---
 

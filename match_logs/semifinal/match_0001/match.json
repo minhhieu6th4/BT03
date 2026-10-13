@@ -1,0 +1,57 @@
+{
+  "match_id": "match_0001",
+  "stage": "semifinal",
+  "group": null,
+  "format": "BO5",
+  "status": "COMPLETED",
+  "red_team": {
+    "id": 1,
+    "name": "UET_Dragons",
+    "bot": "AlphaRock_v2"
+  },
+  "blue_team": {
+    "id": 7,
+    "name": "DeepLogic",
+    "bot": "MinimaxPro"
+  },
+  "score": {
+    "red": 3,
+    "blue": 2
+  },
+  "winner": "RED",
+  "winner_team": "UET_Dragons",
+  "games_count": 0,
+  "games": [
+    {
+      "game_id": "game_01",
+      "winner": "RED",
+      "total_turns": 45,
+      "reason": "Destination reached"
+    },
+    {
+      "game_id": "game_02",
+      "winner": "BLUE",
+      "total_turns": 48,
+      "reason": "Destination reached"
+    },
+    {
+      "game_id": "game_03",
+      "winner": "RED",
+      "total_turns": 39,
+      "reason": "Combat victory"
+    },
+    {
+      "game_id": "game_04",
+      "winner": "BLUE",
+      "total_turns": 62,
+      "reason": "Destination reached"
+    },
+    {
+      "game_id": "game_05",
+      "winner": "RED",
+      "total_turns": 33,
+      "reason": "Decisive base capture"
+    }
+  ],
+  "created_at": "2026-10-11T12:29:12.531989+00:00"
+}

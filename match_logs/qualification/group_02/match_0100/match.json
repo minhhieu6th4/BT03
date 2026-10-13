@@ -1,0 +1,36 @@
+{
+  "match_id": "match_0100",
+  "stage": "qualification",
+  "group": "group_02",
+  "format": "BO1",
+  "status": "COMPLETED",
+  "red_team": {
+    "id": 15,
+    "name": "AI_Pioneers",
+    "bot": "QuantumGreedy"
+  },
+  "blue_team": {
+    "id": 16,
+    "name": "DataKnights",
+    "bot": "ShieldBot"
+  },
+  "score": {
+    "red": 0,
+    "blue": 1
+  },
+  "winner": "BLUE",
+  "winner_team": "DataKnights",
+  "games_count": 1,
+  "games": [
+    {
+      "game_id": "game_01",
+      "game_number": 1,
+      "winner": "BLUE",
+      "winner_team": "DataKnights",
+      "total_turns": 30,
+      "reason": "Red lost all pieces of one type",
+      "file": "game_01.json"
+    }
+  ],
+  "created_at": "2026-10-11T12:29:12.511666+00:00"
+}

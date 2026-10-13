@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Xếp Hạng Cá Nhân Server - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html" class="active">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+            <div>
+                <h2 style="margin: 0 0 4px 0;">📊 Bảng Xếp Hạng Cá Nhân Toàn Server</h2>
+                <p style="margin: 0; color: #64748b;">Xếp hạng người chơi chế độ Thi đấu thường (Thắng: 3đ, Hòa: 1đ, Thua: 0đ)</p>
+            </div>
+            <button class="btn btn-outline" onclick="loadLeaderboard()">🔄 Làm Mới</button>
+        </div>
+
+        <div class="table-container">
+            <table id="leaderboardTable">
+                <thead>
+                    <tr>
+                        <th>Hạng</th>
+                        <th>Người Chơi</th>
+                        <th>Tổng Trận</th>
+                        <th>Thắng (W)</th>
+                        <th>Hòa (D)</th>
+                        <th>Thua (L)</th>
+                        <th>Tỷ Lệ Thắng</th>
+                        <th>Tổng Điểm</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    <tr><td colspan="8" style="text-align: center; color: #94a3b8;">Đang tải dữ liệu xếp hạng...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top: 30px; background: #f8fafc; border-left: 4px solid #2563eb;">
+            <h4 style="margin: 0 0 8px 0; color: #0f172a;">📜 Quy Tắc Xếp Hạng Cá Nhân Thực Tế</h4>
+            <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                • Điểm số tính theo công thức chuẩn: <code>total_points = wins * 3 + draws</code><br>
+                • Chỉ ghi nhận các trận đấu thường hoàn thành hợp lệ (không cộng dữ liệu ảo).<br>
+                • Sắp xếp theo: <strong>Tổng điểm giảm dần</strong>, nếu bằng điểm ưu tiên <strong>Số trận thắng cao hơn</strong>.
+            </p>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        function loadLeaderboard() {
+            const tbody = document.getElementById('leaderboardBody');
+            fetch(`${API_BASE}/api/ranking/server`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #94a3b8;">Chưa có dữ liệu người chơi</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = data.map(item => {
+                        let medal = `#${item.rank}`;
+                        if (item.rank === 1) medal = '🥇 1';
+                        else if (item.rank === 2) medal = '🥈 2';
+                        else if (item.rank === 3) medal = '🥉 3';
+
+                        return `
+                            <tr>
+                                <td><strong>${medal}</strong></td>
+                                <td><strong>${item.username}</strong></td>
+                                <td>${item.total_matches}</td>
+                                <td style="color: #16a34a; font-weight: bold;">${item.wins}</td>
+                                <td style="color: #ca8a04;">${item.draws}</td>
+                                <td style="color: #dc2626;">${item.losses}</td>
+                                <td>${item.win_rate}%</td>
+                                <td><strong style="color: #2563eb; font-size: 1.1rem;">${item.total_points}</strong></td>
+                            </tr>
+                        `;
+                    }).join('');
+                })
+                .catch(() => {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: red;">Lỗi tải dữ liệu bảng xếp hạng!</td></tr>`;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadLeaderboard);
+    </script>
+</body>
+</html>

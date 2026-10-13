@@ -1,0 +1,51 @@
+{
+  "match_id": "match_0001",
+  "stage": "quarterfinal",
+  "group": null,
+  "format": "BO5",
+  "status": "COMPLETED",
+  "red_team": {
+    "id": 1,
+    "name": "UET_Dragons",
+    "bot": "AlphaRock_v2"
+  },
+  "blue_team": {
+    "id": 5,
+    "name": "QuantumLeap",
+    "bot": "SuperPosition"
+  },
+  "score": {
+    "red": 3,
+    "blue": 1
+  },
+  "winner": "RED",
+  "winner_team": "UET_Dragons",
+  "games_count": 0,
+  "games": [
+    {
+      "game_id": "game_01",
+      "winner": "RED",
+      "total_turns": 35,
+      "reason": "Red reached destination base"
+    },
+    {
+      "game_id": "game_02",
+      "winner": "BLUE",
+      "total_turns": 51,
+      "reason": "Blue reached destination base"
+    },
+    {
+      "game_id": "game_03",
+      "winner": "RED",
+      "total_turns": 40,
+      "reason": "Red combat dominance"
+    },
+    {
+      "game_id": "game_04",
+      "winner": "RED",
+      "total_turns": 28,
+      "reason": "Blue timeout"
+    }
+  ],
+  "created_at": "2026-10-11T12:29:12.526655+00:00"
+}

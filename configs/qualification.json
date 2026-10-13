@@ -1,0 +1,15 @@
+{
+    "phase_name": "Qualification Round (Vòng Bảng)",
+    "format": "Group Stage",
+    "groups_count": 8,
+    "teams_per_group": 16,
+    "match_format": "BO1",
+    "points": {
+        "win": 3,
+        "draw": 1,
+        "loss": 0
+    },
+    "advance_per_group": 4,
+    "total_advancing": 32,
+    "next_phase": "top32"
+}

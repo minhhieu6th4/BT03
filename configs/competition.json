@@ -1,0 +1,13 @@
+{
+    "competition_name": "UET Algorithm Battle",
+    "version": "1.0",
+    "total_teams_allowed": 128,
+    "registration_open": true,
+    "game_rules": {
+        "board_width": 9,
+        "board_height": 9,
+        "max_turns_per_game": 200,
+        "time_limit_per_move_ms": 2000,
+        "memory_limit_mb": 256
+    }
+}

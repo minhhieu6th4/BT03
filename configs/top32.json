@@ -1,0 +1,8 @@
+{
+    "phase_name": "Round of 32 (Vòng 32 Đội)",
+    "format": "Knockout",
+    "match_format": "BO3",
+    "seeding_strategy": "cross_group",
+    "total_advancing": 16,
+    "next_phase": "top16"
+}

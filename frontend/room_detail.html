@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi Tiết Phòng Đấu & Thi Đấu Bot - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .board-container {
+            display: inline-block;
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .board-header-row {
+            display: flex;
+            margin-left: 28px;
+            margin-bottom: 4px;
+        }
+        .col-index {
+            width: 45px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #64748b;
+        }
+        .board-with-row-indices {
+            display: flex;
+        }
+        .row-indices {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 24px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #64748b;
+            text-align: right;
+            padding-right: 6px;
+        }
+        .piece-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .pulse-anim {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html" class="active">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Header thông tin phòng -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <a href="rooms.html" style="color: #64748b; text-decoration: none; font-size: 0.9rem;">← Quay lại sảnh phòng</a>
+                <h2 style="margin: 6px 0 0 0;" id="roomTitle">Phòng Thách Đấu</h2>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.9rem; color: #64748b;">MÃ PHÒNG (ROOM CODE):</span>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                    <strong id="roomCodeDisplay" style="font-family: monospace; font-size: 1.3rem; color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 6px; border: 1px dashed #3b82f6;">...</strong>
+                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="copyRoomCode()">Sao Chép</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 24px;">
+            <span id="roomStatusBadge" class="badge badge-waiting" style="font-size: 1rem; padding: 8px 18px;">WAITING</span>
+        </div>
+
+        <!-- Banner thông báo trạng thái Khách / Đối thủ -->
+        <div id="guestStatusBanner" style="margin-bottom: 20px;"></div>
+
+        <!-- 2 Vị Trí Người Chơi & Chọn Bot (Red vs Blue) -->
+        <div class="grid-2">
+            <!-- Slot 1: Chủ phòng (RED) -->
+            <div class="card" id="slotPlayer1" style="border: 2px solid #ef4444; background: #fff5f5; text-align: center;">
+                <span class="badge" style="background: #ef4444; color: white;">🔴 QUÂN ĐỎ (RED) - CHỦ PHÒNG</span>
+                <h3 style="margin: 12px 0 6px 0;" id="p1Name">Đang tải...</h3>
+                <div id="p1ReadyBadge" style="margin-top: 8px;">
+                    <span class="badge badge-waiting">Chưa Sẵn Sàng ⏳</span>
+                </div>
+
+                <!-- Khu vực chọn bot của Player 1 -->
+                <div class="bot-select-box" id="p1BotBox" style="margin-top: 16px;">
+                    <label style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #b91c1c;">🤖 Bot Của Đỏ (Red):</label>
+                    <div id="p1BotSelectorContainer">
+                        <span id="p1BotStaticDisplay" style="color: #64748b; font-style: italic;">Chưa chọn bot</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slot 2: Đối thủ (BLUE) -->
+            <div class="card" id="slotPlayer2" style="border: 2px solid #3b82f6; background: #eff6ff; text-align: center;">
+                <span class="badge" style="background: #3b82f6; color: white;">🔵 QUÂN XANH (BLUE) - ĐỐI THỦ</span>
+                <h3 style="margin: 12px 0 6px 0;" id="p2Name">Chờ đối thủ...</h3>
+                <div id="p2ReadyBadge" style="margin-top: 8px;">
+                    <span class="badge badge-finished">Trống</span>
+                </div>
+
+                <!-- Khu vực chọn bot của Player 2 -->
+                <div class="bot-select-box" id="p2BotBox" style="margin-top: 16px;">
+                    <label style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #1d4ed8;">🤖 Bot Của Xanh (Blue):</label>
+                    <div id="p2BotSelectorContainer">
+                        <span id="p2BotStaticDisplay" style="color: #64748b; font-style: italic;">Chưa chọn bot</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hướng dẫn nộp bot nếu chưa có -->
+        <div style="text-align: center; margin-top: 12px;">
+            <span style="font-size: 0.88rem; color: #64748b;">
+                Chưa có bot Python hợp lệ? <a href="submit.html" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Vào mục Quản lý Bot để tải lên và kiểm tra bot</a>
+            </span>
+        </div>
+
+        <!-- Nút điều khiển phòng: Sẵn sàng, Bắt đầu, Hủy phòng -->
+        <div style="display: flex; justify-content: center; gap: 15px; margin-top: 24px; flex-wrap: wrap;">
+            <button id="btnReady" class="btn btn-success" style="padding: 10px 24px; font-size: 1rem;" onclick="toggleReady()">⚡ Sẵn Sàng</button>
+            <button id="btnStart" class="btn btn-primary pulse-anim" style="padding: 10px 28px; font-size: 1.05rem; display: none;" onclick="startMatch()">🚀 Bắt Đầu Trận Đấu Bot</button>
+            <button id="btnCancelRoom" class="btn btn-danger" style="padding: 10px 24px; font-size: 1rem; display: none;" onclick="cancelRoom()">🗑️ Hủy Phòng Đấu</button>
+        </div>
+
+        <!-- Yêu cầu tham gia phòng (Dành riêng cho Chủ Phòng) -->
+        <div id="ownerRequestsCard" class="card" style="margin-top: 30px; display: none;">
+            <h3 style="margin-top: 0; color: #0f172a;">📩 Yêu Cầu Tham Gia Phòng Của Đối Thủ</h3>
+            <p style="color: #64748b; font-size: 0.9rem;">Chỉ tối đa 1 đối thủ được chấp nhận vào phòng. Khi bạn chấp nhận, các yêu cầu khác sẽ tự động từ chối.</p>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Người Chơi</th>
+                            <th>Thời Gian</th>
+                            <th>Trạng Thái</th>
+                            <th>Quyết Định</th>
+                        </tr>
+                    </thead>
+                    <tbody id="joinRequestsBody">
+                        <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Không có yêu cầu nào đang chờ.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- KHU VỰC THI ĐẤU BOT TỰ ĐỘNG & BÀN CỜ TRỰC QUAN (PLAYBACK ARENA) -->
+        <!-- ============================================================== -->
+        <div id="battleArenaSection" style="display: none; margin-top: 36px; border-top: 2px solid #e2e8f0; padding-top: 28px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 6px 0;" id="arenaTitle">⚔️ Đại Chiến 2 Bot Tự Động</h2>
+                <p id="arenaSubtitle" style="color: #64748b; margin: 0;">Hai bot đang tự động điều khiển quân cờ trong Sandbox. Bàn cờ chỉ hiển thị (Spectator Mode).</p>
+            </div>
+
+            <!-- Banner kết quả / sự kiện lượt đi -->
+            <div id="eventBanner" style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 5px solid #3b82f6; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95rem;">
+                <strong id="eventBannerText">Chuẩn bị bàn cờ...</strong>
+            </div>
+
+            <!-- Giao diện 2 cột: Bàn cờ bên trái, Lịch sử nước đi bên phải -->
+            <div class="battle-arena-layout">
+                <!-- Cột trái: Bàn cờ & Bộ điều khiển Playback -->
+                <div>
+                    <!-- Bộ đếm quân cờ còn sống của 2 phe -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="font-weight: bold; color: #ef4444; font-size: 0.9rem;">🔴 ĐỎ (RED):</span>
+                            <span class="piece-badge" id="redRockCount">🪨 3</span>
+                            <span class="piece-badge" id="redPaperCount">📄 3</span>
+                            <span class="piece-badge" id="redScissorsCount">✂️ 3</span>
+                        </div>
+                        <div>
+                            <span style="font-weight: bold; color: #3b82f6; font-size: 0.9rem;">🔵 XANH (BLUE):</span>
+                            <span class="piece-badge" id="blueRockCount">🪨 3</span>
+                            <span class="piece-badge" id="bluePaperCount">📄 3</span>
+                            <span class="piece-badge" id="blueScissorsCount">✂️ 3</span>
+                        </div>
+                    </div>
+
+                    <!-- Bàn cờ 9x9 với tọa độ -->
+                    <div style="text-align: center;">
+                        <div class="board-container">
+                            <!-- Hàng chỉ số cột 0-8 -->
+                            <div class="board-header-row">
+                                <div class="col-index">0</div><div class="col-index">1</div><div class="col-index">2</div>
+                                <div class="col-index">3</div><div class="col-index">4</div><div class="col-index">5</div>
+                                <div class="col-index">6</div><div class="col-index">7</div><div class="col-index">8</div>
+                            </div>
+                            <div class="board-with-row-indices">
+                                <!-- Cột chỉ số hàng 0-8 -->
+                                <div class="row-indices">
+                                    <div>0</div><div>1</div><div>2</div>
+                                    <div>3</div><div>4</div><div>5</div>
+                                    <div>6</div><div>7</div><div>8</div>
+                                </div>
+                                <!-- Lưới 9x9 ô cờ -->
+                                <div id="liveBoard" class="board" style="margin-top: 0;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thanh tua nước đi (Scrubber) -->
+                    <div style="margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; margin-bottom: 4px;">
+                            <span>Nước đi ban đầu (0)</span>
+                            <span id="turnCounterLabel" style="font-weight: bold; color: #0f172a;">Lượt: 0 / 0</span>
+                            <span id="maxTurnLabel">Tổng: 0</span>
+                        </div>
+                        <input type="range" id="turnScrubber" min="0" max="0" value="0" style="width: 100%; cursor: pointer;" oninput="onScrubChange(this.value)">
+                    </div>
+
+                    <!-- Thanh công cụ điều khiển phát (Playback Controls) -->
+                    <div class="playback-controls-bar">
+                        <button class="btn btn-outline" style="padding: 6px 10px;" onclick="goToStep(0)" title="Về đầu trận">⏮️ Đầu</button>
+                        <button class="btn btn-outline" style="padding: 6px 10px;" onclick="stepPrev()" title="Lùi 1 lượt">◀️ Lùi</button>
+                        <button id="btnPlayPause" class="btn btn-primary" style="padding: 6px 18px; min-width: 110px;" onclick="togglePlayPause()">▶️ Tự Động</button>
+                        <button class="btn btn-outline" style="padding: 6px 10px;" onclick="stepNext()" title="Tiến 1 lượt">Tiến ▶️</button>
+                        <button class="btn btn-outline" style="padding: 6px 10px;" onclick="goToStep(matchMoves.length)" title="Tua đến cuối">⏭️ Cuối</button>
+                        <button class="btn btn-secondary" style="padding: 6px 12px;" onclick="restartPlayback()" title="Xem lại từ đầu">🔄 Xem Lại</button>
+
+                        <div style="display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;">
+                            <label style="font-size: 0.85rem; color: #475569; font-weight: 500;">Tốc độ:</label>
+                            <select id="speedSelect" onchange="onSpeedChange(this.value)" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
+                                <option value="2000">0.5x (2s)</option>
+                                <option value="1200" selected>1.0x (1.2s)</option>
+                                <option value="600">2.0x (0.6s)</option>
+                                <option value="300">4.0x (0.3s)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột phải: Lịch Sử Nước Đi (Move History Log) -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">📜 Lịch Sử Nước Đi (Move Log)</h3>
+                        <span id="logSummaryBadge" class="badge badge-ready">0 nước đi</span>
+                    </div>
+                    <div class="move-log-container" id="moveLogList">
+                        <div style="text-align: center; color: #94a3b8; padding: 24px;">Đang tải danh sách nước đi...</div>
+                    </div>
+
+                    <!-- Thẻ tổng kết kết quả trận đấu -->
+                    <div id="matchVerdictCard" class="card" style="display: none; margin-top: 16px; border-left: 5px solid #10b981; background: #f0fdf4;">
+                        <h4 style="margin: 0 0 6px 0; color: #15803d; font-size: 1.1rem;" id="verdictTitle">🏆 KẾT QUẢ TRẬN ĐẤU</h4>
+                        <p id="verdictReason" style="margin: 0 0 10px 0; color: #166534; font-size: 0.95rem;"></p>
+                        <div style="font-size: 0.85rem; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                            Điểm số đã được cộng tự động vào Bảng Xếp Hạng Server (+3đ thắng / +1đ hòa).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('id');
+
+        let currentRoom = null;
+        let currentUserId = null;
+        let isCurrentUserReady = false;
+        let myReadyBots = [];
+
+        // Trạng thái phát lại trận đấu (Match Playback Engine)
+        let matchMoves = [];
+        let initialBoard = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playbackInterval = null;
+        let playbackSpeedMs = 1200;
+        let matchResultData = null;
+        let hasScrolledToArena = false;
+
+        const pieceIcons = {
+            1: { char: '🪨', label: 'Đá', class: 'piece-red' },
+            2: { char: '📄', label: 'Giấy', class: 'piece-red' },
+            3: { char: '✂️', label: 'Kéo', class: 'piece-red' },
+            4: { char: '🪨', label: 'Đá', class: 'piece-blue' },
+            5: { char: '📄', label: 'Giấy', class: 'piece-blue' },
+            6: { char: '✂️', label: 'Kéo', class: 'piece-blue' }
+        };
+
+        function copyRoomCode() {
+            if (!currentRoom) return;
+            navigator.clipboard.writeText(currentRoom.room_code)
+                .then(() => alert("Đã sao chép mã phòng: " + currentRoom.room_code))
+                .catch(() => alert("Mã phòng: " + currentRoom.room_code));
+        }
+
+        async function loadMyReadyBots() {
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/ready`, { headers: authHeaders() });
+                if (res.ok) {
+                    myReadyBots = await res.json();
+                }
+            } catch (e) {
+                console.warn("Không thể tải danh sách bot sẵn sàng:", e);
+            }
+        }
+
+        function getRoomTargetId() {
+            return (currentRoom && currentRoom.id) ? currentRoom.id : roomId;
+        }
+
+        async function loadRoom() {
+            if (!roomId) {
+                alert("Không có mã phòng!");
+                window.location.href = "rooms.html";
+                return;
+            }
+
+            try {
+                const target = getRoomTargetId();
+                const res = await fetch(`${API_BASE}/api/rooms/${target}`, { headers: authHeaders() });
+                if (!res.ok) throw new Error("Không thể tải thông tin phòng");
+                currentRoom = await res.json();
+                renderRoom();
+
+                // Nếu phòng đang PLAYING hoặc FINISHED, tải dữ liệu trận đấu và bắt đầu playback
+                if (currentRoom.status === 'PLAYING' || currentRoom.status === 'FINISHED') {
+                    if (matchMoves.length === 0) {
+                        await loadMatchState();
+                        if (!isPlaying && matchMoves.length > 0) {
+                            startAutoPlay();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderGuestBanner() {
+            const bannerElem = document.getElementById('guestStatusBanner');
+            if (!bannerElem || !currentRoom) return;
+
+            const myRole = currentRoom.my_role;
+            const myJoinStatus = currentRoom.my_join_status;
+
+            if (myRole === 'PENDING_GUEST') {
+                bannerElem.innerHTML = `
+                    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-left: 6px solid #d97706; padding: 12px 18px; border-radius: 8px; color: #92400e; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong>⏳ Yêu cầu tham gia của bạn đang chờ chủ phòng duyệt...</strong>
+                            <div style="font-size: 0.85rem; margin-top: 3px; color: #b45309;">Hệ thống đang tự động đồng bộ. Ngay khi chủ phòng bấm "Chấp Nhận", bạn sẽ vào thẳng phòng Quân Xanh!</div>
+                        </div>
+                        <span class="badge badge-waiting pulse-anim" style="font-size: 0.85rem;">Đang Chờ Duyệt ⏳</span>
+                    </div>
+                `;
+                return;
+            }
+
+            if (myRole === 'PLAYER2') {
+                bannerElem.innerHTML = `
+                    <div style="background: #eff6ff; border: 1px solid #60a5fa; border-left: 6px solid #2563eb; padding: 12px 18px; border-radius: 8px; color: #1e40af; font-size: 0.95rem;">
+                        <strong>🎉 Bạn đã vào phòng thành công (Quân Xanh - Blue)!</strong>
+                        <div style="font-size: 0.88rem; margin-top: 4px; color: #1d4ed8;">Hãy chọn Bot Python của bạn ở ô bên dưới và bấm nút <strong>"⚡ Sẵn Sàng"</strong> để chuẩn bị thi đấu.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (myJoinStatus === 'REJECTED') {
+                bannerElem.innerHTML = `
+                    <div style="background: #fef2f2; border: 1px solid #f87171; border-left: 6px solid #dc2626; padding: 12px 18px; border-radius: 8px; color: #991b1b; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong>❌ Yêu cầu tham gia phòng của bạn đã bị từ chối bởi chủ phòng.</strong>
+                            <div style="font-size: 0.85rem; margin-top: 3px; color: #b91c1c;">Bạn có thể quay lại sảnh để tìm phòng khác.</div>
+                        </div>
+                        <a href="rooms.html" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">Tìm Phòng Khác</a>
+                    </div>
+                `;
+                return;
+            }
+
+            if (myRole === 'SPECTATOR' && !currentRoom.player2_id && currentRoom.status === 'WAITING') {
+                bannerElem.innerHTML = `
+                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 6px solid #64748b; padding: 12px 18px; border-radius: 8px; color: #334155; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong>👀 Bạn đang xem phòng với tư cách Khán Giả.</strong>
+                            <div style="font-size: 0.85rem; margin-top: 3px; color: #64748b;">Vị trí Quân Xanh (Blue) hiện đang trống! Bạn có muốn gửi yêu cầu tham gia không?</div>
+                        </div>
+                        <button class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="sendJoinRequestFromRoom()">📩 Gửi Yêu Cầu Tham Gia</button>
+                    </div>
+                `;
+                return;
+            }
+
+            bannerElem.innerHTML = '';
+        }
+
+        async function sendJoinRequestFromRoom() {
+            try {
+                const target = getRoomTargetId();
+                const res = await fetch(`${API_BASE}/api/rooms/${target}/join`, {
+                    method: 'POST',
+                    headers: authHeaders()
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Không thể gửi yêu cầu tham gia");
+                }
+                await loadRoom();
+            } catch (err) {
+                alert("Lỗi: " + err.message);
+            }
+        }
+
+        function renderRoom() {
+            if (!currentRoom) return;
+
+            document.getElementById('roomTitle').innerText = currentRoom.name;
+            document.getElementById('roomCodeDisplay').innerText = currentRoom.room_code;
+
+            const badge = document.getElementById('roomStatusBadge');
+            badge.innerText = currentRoom.status;
+            badge.className = 'badge badge-' + currentRoom.status.toLowerCase();
+
+            // Hiển thị banner tương tác cho Guest / Spectator / Player2
+            renderGuestBanner();
+
+            const isPlayer1 = (currentRoom.my_role === 'PLAYER1') || (currentUserId && currentUserId === currentRoom.player1_id);
+            const isPlayer2 = (currentRoom.my_role === 'PLAYER2') || (currentUserId && currentUserId === currentRoom.player2_id);
+            const isOwner = isPlayer1 || (currentUserId && currentUserId === currentRoom.owner_id);
+
+            // Player 1
+            const p1NameText = currentRoom.player1_name || 'Đang trống';
+            document.getElementById('p1Name').innerText = isPlayer1 ? `${p1NameText} (BẠN)` : p1NameText;
+            const p1Ready = document.getElementById('p1ReadyBadge');
+            if (currentRoom.player1_ready) {
+                p1Ready.innerHTML = '<span class="badge badge-ready">Đã Sẵn Sàng ✅</span>';
+            } else {
+                p1Ready.innerHTML = '<span class="badge badge-waiting">Chưa Sẵn Sàng ⏳</span>';
+            }
+
+            // Player 2
+            const p2NameElem = document.getElementById('p2Name');
+            const p2Ready = document.getElementById('p2ReadyBadge');
+            if (currentRoom.player2_name) {
+                p2NameElem.innerText = isPlayer2 ? `${currentRoom.player2_name} (BẠN)` : currentRoom.player2_name;
+                if (currentRoom.player2_ready) {
+                    p2Ready.innerHTML = '<span class="badge badge-ready">Đã Sẵn Sàng ✅</span>';
+                } else {
+                    p2Ready.innerHTML = '<span class="badge badge-waiting">Chưa Sẵn Sàng ⏳</span>';
+                }
+            } else {
+                if (currentRoom.my_role === 'PENDING_GUEST') {
+                    p2NameElem.innerText = "Yêu cầu của bạn đang chờ duyệt...";
+                    p2Ready.innerHTML = '<span class="badge badge-waiting">Đang Chờ Chủ Phòng ⏳</span>';
+                } else {
+                    p2NameElem.innerText = "Đang Chờ Đối Thủ...";
+                    p2Ready.innerHTML = '<span class="badge badge-finished">Trống</span>';
+                }
+            }
+
+            // Render Bot Selectors
+            renderBotSelector(1, isPlayer1, currentRoom.player1_bot_id, currentRoom.player1_bot_name, currentRoom.player1_bot_version);
+            renderBotSelector(2, isPlayer2, currentRoom.player2_bot_id, currentRoom.player2_bot_name, currentRoom.player2_bot_version);
+
+            // Nút Sẵn Sàng
+            const btnReady = document.getElementById('btnReady');
+            if (isPlayer1 || isPlayer2) {
+                btnReady.style.display = 'inline-flex';
+                const myReady = isPlayer1 ? currentRoom.player1_ready : currentRoom.player2_ready;
+                isCurrentUserReady = myReady;
+                btnReady.innerText = myReady ? '❌ Hủy Sẵn Sàng' : '⚡ Sẵn Sàng';
+                btnReady.className = myReady ? 'btn btn-secondary' : 'btn btn-success';
+            } else {
+                btnReady.style.display = 'none';
+            }
+
+            // Nút Bắt Đầu (Chỉ Chủ phòng khi trạng thái phòng là READY)
+            const btnStart = document.getElementById('btnStart');
+            if (isOwner && currentRoom.status === 'READY') {
+                btnStart.style.display = 'inline-flex';
+            } else {
+                btnStart.style.display = 'none';
+            }
+
+            // Nút Hủy Phòng (Chủ phòng khi WAITING hoặc READY)
+            const btnCancel = document.getElementById('btnCancelRoom');
+            if (isOwner && (currentRoom.status === 'WAITING' || currentRoom.status === 'READY')) {
+                btnCancel.style.display = 'inline-flex';
+            } else {
+                btnCancel.style.display = 'none';
+            }
+
+            if (currentRoom.status === 'CANCELLED') {
+                alert("Phòng đấu này đã bị chủ phòng hủy bỏ!");
+                window.location.href = "rooms.html";
+                return;
+            }
+
+            // Join requests card for owner
+            const requestsCard = document.getElementById('ownerRequestsCard');
+            if (isOwner && currentRoom.join_requests && currentRoom.join_requests.length > 0) {
+                requestsCard.style.display = 'block';
+                const tbody = document.getElementById('joinRequestsBody');
+                tbody.innerHTML = currentRoom.join_requests.map(req => `
+                    <tr>
+                        <td><strong>${req.username}</strong></td>
+                        <td>${req.created_at ? new Date(req.created_at).toLocaleTimeString() : 'Vừa xong'}</td>
+                        <td><span class="badge badge-${req.status.toLowerCase()}">${req.status}</span></td>
+                        <td>
+                            ${req.status === 'PENDING' ? `
+                                <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.85rem;" onclick="respondRequest(${req.id}, 'ACCEPT')">Chấp Nhận</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.85rem; margin-left: 4px;" onclick="respondRequest(${req.id}, 'REJECT')">Từ Chối</button>
+                            ` : `<span style="color: #94a3b8; font-size: 0.85rem;">Đã xử lý</span>`}
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                requestsCard.style.display = 'none';
+            }
+        }
+
+        function renderBotSelector(slotNum, isCurrentPlayer, selectedBotId, botName, botVer) {
+            const containerId = slotNum === 1 ? 'p1BotSelectorContainer' : 'p2BotSelectorContainer';
+            const container = document.getElementById(containerId);
+
+            if (isCurrentPlayer) {
+                let optionsHtml = `<option value="">-- Chọn Bot READY của bạn --</option>`;
+                myReadyBots.forEach(b => {
+                    const isSel = (selectedBotId && selectedBotId === b.id) ? 'selected' : '';
+                    optionsHtml += `<option value="${b.id}" ${isSel}>${b.name} (v${b.current_version_number})</option>`;
+                });
+
+                let promptSubmit = '';
+                if (myReadyBots.length === 0) {
+                    promptSubmit = `<div style="font-size: 0.8rem; color: #dc2626; margin-top: 4px;">Bạn chưa có Bot READY nào! <a href="submit.html" style="font-weight: bold; text-decoration: underline;">Tải bot lên ngay ➔</a></div>`;
+                }
+
+                container.innerHTML = `
+                    <select class="form-select" onchange="onSelectBotChanged(this.value)">
+                        ${optionsHtml}
+                    </select>
+                    ${promptSubmit}
+                `;
+            } else {
+                if (botName) {
+                    container.innerHTML = `<span style="font-weight: bold; color: #0f172a;">🤖 ${botName} <span class="badge badge-ready" style="font-size: 0.8rem;">v${botVer || 1}</span></span>`;
+                } else {
+                    container.innerHTML = `<span style="color: #94a3b8; font-style: italic;">Chưa chọn bot ⏳</span>`;
+                }
+            }
+        }
+
+        async function onSelectBotChanged(botId) {
+            if (!botId) return;
+            try {
+                const target = getRoomTargetId();
+                const res = await fetch(`${API_BASE}/api/rooms/${target}/select-bot`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ bot_id: parseInt(botId) })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Không thể chọn Bot");
+                }
+                currentRoom = await res.json();
+                renderRoom();
+            } catch (err) {
+                alert("Lỗi chọn Bot: " + err.message);
+                loadRoom();
+            }
+        }
+
+        function toggleReady() {
+            const isP1 = (currentRoom.my_role === 'PLAYER1') || (currentUserId && currentUserId === currentRoom.player1_id);
+            const isP2 = (currentRoom.my_role === 'PLAYER2') || (currentUserId && currentUserId === currentRoom.player2_id);
+
+            if (isP1 && !currentRoom.player1_bot_id) {
+                alert("⚠️ Vui lòng chọn một Bot ở trạng thái READY trước khi bấm Sẵn Sàng!");
+                return;
+            }
+            if (isP2 && !currentRoom.player2_bot_id) {
+                alert("⚠️ Vui lòng chọn một Bot ở trạng thái READY trước khi bấm Sẵn Sàng!");
+                return;
+            }
+
+            const nextStatus = !isCurrentUserReady;
+            fetch(`${API_BASE}/api/rooms/${getRoomTargetId()}/ready`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ is_ready: nextStatus })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi cập nhật"); });
+                return res.json();
+            })
+            .then(room => {
+                currentRoom = room;
+                renderRoom();
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function respondRequest(requestId, action) {
+            fetch(`${API_BASE}/api/rooms/${getRoomTargetId()}/requests/${requestId}`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ action: action })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi xử lý yêu cầu"); });
+                return res.json();
+            })
+            .then(room => {
+                currentRoom = room;
+                renderRoom();
+            })
+            .catch(err => alert(err.message));
+        }
+
+        async function startMatch() {
+            const btn = document.getElementById('btnStart');
+            btn.disabled = true;
+            btn.innerText = "⏳ Đang chạy mô phỏng bot trong Sandbox...";
+
+            try {
+                const target = getRoomTargetId();
+                const res = await fetch(`${API_BASE}/api/rooms/${target}/start`, {
+                    method: 'POST',
+                    headers: authHeaders()
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Không thể bắt đầu trận");
+                }
+                await loadRoom();
+                await loadMatchState();
+                // Tự động phát trận đấu
+                startAutoPlay();
+            } catch (err) {
+                alert("Lỗi khởi chạy trận đấu: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "🚀 Bắt Đầu Trận Đấu Bot";
+            }
+        }
+
+        function cancelRoom() {
+            if (!confirm("Bạn có chắc chắn muốn hủy phòng đấu này không?")) return;
+
+            fetch(`${API_BASE}/api/rooms/${getRoomTargetId()}/cancel`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi hủy phòng"); });
+                return res.json();
+            })
+            .then(data => {
+                alert(data.message || "Đã hủy phòng thành công!");
+                window.location.href = "rooms.html";
+            })
+            .catch(err => alert(err.message));
+        }
+
+        // ==============================================================
+        // LOGIC BÀN CỜ & TRÌNH PHÁT NƯỚC ĐI TỰ ĐỘNG (PLAYBACK ENGINE)
+        // ==============================================================
+        function initEmptyBoard() {
+            const boardDiv = document.getElementById('liveBoard');
+            boardDiv.innerHTML = '';
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `bcell-${r}-${c}`;
+                    if (r === 0 && c === 0) {
+                        cell.classList.add('red-dest');
+                        cell.title = 'Đích đến của Xanh (BLUE GOAL: 0, 0)';
+                    }
+                    if (r === 8 && c === 8) {
+                        cell.classList.add('blue-dest');
+                        cell.title = 'Đích đến của Đỏ (RED GOAL: 8, 8)';
+                    }
+                    boardDiv.appendChild(cell);
+                }
+            }
+        }
+
+        async function loadMatchState() {
+            try {
+                const target = getRoomTargetId();
+                const res = await fetch(`${API_BASE}/api/rooms/${target}/match-state`, { headers: authHeaders() });
+                if (!res.ok) return;
+                const state = await res.json();
+                if (!state.has_match) return;
+
+                matchResultData = state;
+                initialBoard = state.initial_board || [];
+                matchMoves = state.moves || [];
+
+                document.getElementById('battleArenaSection').style.display = 'block';
+                document.getElementById('arenaTitle').innerText = `⚔️ ${state.red_username} (${state.red_bot_name} v${state.red_bot_version}) VS ${state.blue_username} (${state.blue_bot_name} v${state.blue_bot_version})`;
+
+                if (!hasScrolledToArena) {
+                    hasScrolledToArena = true;
+                    setTimeout(() => {
+                        const arenaSection = document.getElementById('battleArenaSection');
+                        if (arenaSection) {
+                            arenaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 50);
+                }
+
+                const scrubber = document.getElementById('turnScrubber');
+                scrubber.max = matchMoves.length;
+                document.getElementById('maxTurnLabel').innerText = `Tổng: ${matchMoves.length}`;
+                document.getElementById('logSummaryBadge').innerText = `${matchMoves.length} nước đi`;
+
+                renderMoveLogList();
+                goToStep(0);
+
+                if (state.status === 'COMPLETED' || state.room_status === 'FINISHED') {
+                    renderVerdict(state);
+                }
+            } catch (e) {
+                console.error("Lỗi nạp trạng thái trận đấu:", e);
+            }
+        }
+
+        function renderBoardState(matrix, lastMove = null) {
+            if (!matrix || matrix.length !== 9) return;
+
+            let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const val = matrix[r][c];
+                    const cell = document.getElementById(`bcell-${r}-${c}`);
+                    if (!cell) continue;
+
+                    cell.className = 'cell';
+                    if (r === 0 && c === 0) cell.classList.add('red-dest');
+                    if (r === 8 && c === 8) cell.classList.add('blue-dest');
+
+                    if (val === 0) {
+                        cell.innerHTML = '';
+                    } else {
+                        const p = pieceIcons[val];
+                        cell.innerHTML = `<span class="${p.class}" style="font-size: 26px;">${p.char}</span>`;
+                        counts[val] = (counts[val] || 0) + 1;
+                    }
+                }
+            }
+
+            // Cập nhật số quân cờ còn lại
+            document.getElementById('redRockCount').innerText = `🪨 ${counts[1] || 0}`;
+            document.getElementById('redPaperCount').innerText = `📄 ${counts[2] || 0}`;
+            document.getElementById('redScissorsCount').innerText = `✂️ ${counts[3] || 0}`;
+            document.getElementById('blueRockCount').innerText = `🪨 ${counts[4] || 0}`;
+            document.getElementById('bluePaperCount').innerText = `📄 ${counts[5] || 0}`;
+            document.getElementById('blueScissorsCount').innerText = `✂️ ${counts[6] || 0}`;
+
+            // Highlight nước đi vừa qua
+            if (lastMove) {
+                const fromCell = document.getElementById(`bcell-${lastMove.from[0]}-${lastMove.from[1]}`);
+                const toCell = document.getElementById(`bcell-${lastMove.to[0]}-${lastMove.to[1]}`);
+                if (fromCell) fromCell.classList.add('last-from');
+                if (toCell) toCell.classList.add('last-to');
+            }
+        }
+
+        function goToStep(step) {
+            step = Math.max(0, Math.min(step, matchMoves.length));
+            currentStepIndex = step;
+
+            const scrubber = document.getElementById('turnScrubber');
+            scrubber.value = step;
+            document.getElementById('turnCounterLabel').innerText = `Lượt: ${step} / ${matchMoves.length}`;
+
+            // Cập nhật highlight trong Move Log (chỉ cuộn bên trong danh sách move log, không làm trôi bàn cờ)
+            const allLogItems = document.querySelectorAll('.move-log-item');
+            allLogItems.forEach(el => el.classList.remove('active'));
+            if (step > 0) {
+                const activeItem = document.getElementById(`log-item-${step}`);
+                const logContainer = document.getElementById('moveLogList');
+                if (activeItem && logContainer) {
+                    activeItem.classList.add('active');
+                    const containerRect = logContainer.getBoundingClientRect();
+                    const itemRect = activeItem.getBoundingClientRect();
+                    const currentScroll = logContainer.scrollTop;
+                    const relativeTop = itemRect.top - containerRect.top + currentScroll;
+                    const targetScroll = relativeTop - (logContainer.clientHeight / 2) + (activeItem.clientHeight / 2);
+                    logContainer.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            // Vẽ bàn cờ
+            if (step === 0) {
+                renderBoardState(initialBoard, null);
+                document.getElementById('eventBannerText').innerHTML = `🏁 Bàn cờ ban đầu (Turn 0) — Chuẩn bị bắt đầu trận đấu.`;
+            } else {
+                const move = matchMoves[step - 1];
+                renderBoardState(move.board_after, move);
+                const teamColor = move.team === 'RED' ? '#ef4444' : '#3b82f6';
+                const teamText = move.team === 'RED' ? 'ĐỎ (RED)' : 'XANH (BLUE)';
+                document.getElementById('eventBannerText').innerHTML = `
+                    <span style="color: ${teamColor}; font-weight: bold;">Lượt ${move.turn} (${teamText}):</span>
+                    Di chuyển từ <strong>(${move.from[0]}, ${move.from[1]})</strong> ➔ <strong>(${move.to[0]}, ${move.to[1]})</strong>.
+                `;
+            }
+
+            // Khi đến bước cuối cùng
+            if (step === matchMoves.length && matchResultData) {
+                pauseAutoPlay();
+                renderVerdict(matchResultData);
+            }
+        }
+
+        function renderMoveLogList() {
+            const listDiv = document.getElementById('moveLogList');
+            if (matchMoves.length === 0) {
+                listDiv.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 24px;">Không có nước đi nào.</div>`;
+                return;
+            }
+
+            let html = '';
+            matchMoves.forEach((m, idx) => {
+                const stepNum = idx + 1;
+                const teamBadge = m.team === 'RED' 
+                    ? `<span class="badge" style="background: #ef4444; color: white; padding: 2px 6px; font-size: 0.75rem;">ĐỎ</span>` 
+                    : `<span class="badge" style="background: #3b82f6; color: white; padding: 2px 6px; font-size: 0.75rem;">XANH</span>`;
+
+                html += `
+                    <div class="move-log-item" id="log-item-${stepNum}" onclick="goToStep(${stepNum})">
+                        <div>
+                            <strong>#${m.turn}</strong> ${teamBadge}
+                            <span>(${m.from[0]}, ${m.from[1]}) ➔ (${m.to[0]}, ${m.to[1]})</span>
+                        </div>
+                        <span style="color: #64748b; font-size: 0.8rem;">Xem ➔</span>
+                    </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+        }
+
+        function renderVerdict(state) {
+            const card = document.getElementById('matchVerdictCard');
+            card.style.display = 'block';
+
+            let winnerName = 'HÒA TRẬN (DRAW)';
+            if (state.winner_user_id === state.red_user_id) {
+                winnerName = `🏆 ĐỎ THẮNG (${state.red_username} / ${state.red_bot_name})`;
+                card.style.borderLeftColor = '#ef4444';
+            } else if (state.winner_user_id === state.blue_user_id) {
+                winnerName = `🏆 XANH THẮNG (${state.blue_username} / ${state.blue_bot_name})`;
+                card.style.borderLeftColor = '#3b82f6';
+            }
+
+            document.getElementById('verdictTitle').innerText = winnerName;
+            document.getElementById('verdictReason').innerText = `Lý do: ${state.termination_reason || 'Kết thúc bình thường'}`;
+        }
+
+        function stepNext() {
+            if (currentStepIndex < matchMoves.length) {
+                goToStep(currentStepIndex + 1);
+            }
+        }
+
+        function stepPrev() {
+            if (currentStepIndex > 0) {
+                goToStep(currentStepIndex - 1);
+            }
+        }
+
+        function onScrubChange(val) {
+            pauseAutoPlay();
+            goToStep(parseInt(val));
+        }
+
+        function onSpeedChange(val) {
+            playbackSpeedMs = parseInt(val);
+            if (isPlaying) {
+                pauseAutoPlay();
+                startAutoPlay();
+            }
+        }
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                pauseAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            if (isPlaying) return;
+            if (currentStepIndex >= matchMoves.length) {
+                currentStepIndex = 0;
+            }
+            isPlaying = true;
+            document.getElementById('btnPlayPause').innerText = '⏸️ Tạm Dừng';
+            document.getElementById('btnPlayPause').className = 'btn btn-warning';
+
+            playbackInterval = setInterval(() => {
+                if (currentStepIndex < matchMoves.length) {
+                    goToStep(currentStepIndex + 1);
+                } else {
+                    pauseAutoPlay();
+                }
+            }, playbackSpeedMs);
+        }
+
+        function pauseAutoPlay() {
+            isPlaying = false;
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+            }
+            const btn = document.getElementById('btnPlayPause');
+            if (btn) {
+                btn.innerText = '▶️ Tự Động';
+                btn.className = 'btn btn-primary';
+            }
+        }
+
+        function restartPlayback() {
+            pauseAutoPlay();
+            goToStep(0);
+            startAutoPlay();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initEmptyBoard();
+            await loadMyReadyBots();
+
+            fetch(`${API_BASE}/api/users/me`, { headers: authHeaders() })
+                .then(res => res.json())
+                .then(user => {
+                    if (user && user.id) currentUserId = user.id;
+                    loadRoom();
+                })
+                .catch(() => loadRoom());
+
+            // Tự động kiểm tra và đồng bộ trạng thái phòng mỗi 1.5s
+            setInterval(() => {
+                if (!currentRoom || currentRoom.status !== 'FINISHED') {
+                    if (myReadyBots.length === 0 && (currentRoom?.my_role === 'PLAYER1' || currentRoom?.my_role === 'PLAYER2')) {
+                        loadMyReadyBots();
+                    }
+                    loadRoom();
+                }
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

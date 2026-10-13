@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UET Algorithm Battle - Đấu Trường Thuật Toán</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html" class="active">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="hero-banner">
+            <h2>Đấu Trường Thuật Toán UET</h2>
+            <p>Hệ thống thi đấu trí tuệ nhân tạo, đối kháng thuật toán cờ kéo-búa-bao 9x9 với Docker Sandbox bảo mật cao và bảng xếp hạng chuẩn toàn server.</p>
+            <div style="margin-top: 15px;">
+                <a href="rules.html" class="btn" style="background: white; color: #1e3a8a; font-weight: bold; padding: 8px 18px; text-decoration: none; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">📖 Xem Luật Chơi 9x9 Chi Tiết ➔</a>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Chế độ 1: Thi Đấu Thường -->
+            <div class="card" style="border-top: 4px solid #2563eb;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>⚔️ Chế Độ Thi Đấu Thường</h3>
+                    <span class="badge badge-playing">PVP 1v1</span>
+                </div>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5;">
+                    Tạo phòng đấu riêng, ghép phòng đối thủ qua ID hoặc danh sách phòng mở. Điểm số cộng trực tiếp vào Bảng Xếp Hạng toàn server:
+                    <strong>Thắng (+3đ), Hòa (+1đ), Thua (0đ)</strong>.
+                </p>
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="rooms.html" class="btn btn-primary">Vào Sảnh Phòng Đấu ➔</a>
+                </div>
+            </div>
+
+            <!-- Chế độ 2: Giải Đấu Knockout -->
+            <div class="card" style="border-top: 4px solid #16a34a;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>🏆 Chế Độ Giải Đấu Knockout</h3>
+                    <span class="badge badge-ready">TOURNAMENT</span>
+                </div>
+                <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5;">
+                    Tổ chức giải đấu loại trực tiếp dành cho từ <strong>4 tuyển thủ trở lên</strong>. Tự động chia nhánh Bracket và xử lý các suất đặc cách (BYE) khi số lượng người chơi lẻ hoặc không phải lũy thừa của 2.
+                </p>
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="tournaments.html" class="btn btn-success">Xem Danh Sách Giải Đấu ➔</a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="js/nav.js"></script>
+</body>
+</html>

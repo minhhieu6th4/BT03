@@ -1,0 +1,45 @@
+{
+  "match_id": "match_0001",
+  "stage": "round_of_32",
+  "group": null,
+  "format": "BO3",
+  "status": "COMPLETED",
+  "red_team": {
+    "id": 1,
+    "name": "UET_Dragons",
+    "bot": "AlphaRock_v2"
+  },
+  "blue_team": {
+    "id": 8,
+    "name": "BinaryBeasts",
+    "bot": "GreedyChallenger"
+  },
+  "score": {
+    "red": 0,
+    "blue": 2
+  },
+  "winner": "BLUE",
+  "winner_team": "BinaryBeasts",
+  "games_count": 2,
+  "games": [
+    {
+      "game_id": "game_01",
+      "game_number": 1,
+      "winner": "BLUE",
+      "winner_team": "BinaryBeasts",
+      "total_turns": 33,
+      "reason": "Red lost all pieces of one type",
+      "file": "game_01.json"
+    },
+    {
+      "game_id": "game_02",
+      "game_number": 2,
+      "winner": "BLUE",
+      "winner_team": "BinaryBeasts",
+      "total_turns": 37,
+      "reason": "Red lost all pieces of one type",
+      "file": "game_02.json"
+    }
+  ],
+  "created_at": "2026-10-11T12:29:12.522903+00:00"
+}

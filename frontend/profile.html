@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ Sơ Cá Nhân & Thống Kê - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" class="active">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div id="authPrompt" style="display:none; text-align: center; padding: 40px;">
+            <h3>Bạn chưa đăng nhập!</h3>
+            <p style="color: #64748b;">Vui lòng đăng nhập để xem hồ sơ và điểm số của bạn.</p>
+            <a href="login.html" class="btn btn-primary" style="margin-top: 15px;">Đăng Nhập Ngay</a>
+        </div>
+
+        <div id="profileSection" style="display:none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px;">
+                <div>
+                    <h2 style="margin: 0 0 6px 0;" id="profUsername">Tên Người Chơi</h2>
+                    <span style="color: #64748b; font-size: 0.95rem;">ID Tài Khoản: <strong id="profUserId">#</strong></span>
+                </div>
+                <div style="text-align: right;">
+                    <span class="badge badge-ready" style="font-size: 1rem; padding: 8px 16px;" id="profRankBadge">Thứ Hạng: #</span>
+                </div>
+            </div>
+
+            <!-- Hộp thống kê chi tiết -->
+            <div class="grid-3">
+                <div class="stat-box">
+                    <div class="stat-label">Tổng Điểm Tích Lũy</div>
+                    <div class="stat-val" style="color: #2563eb;" id="profPoints">0</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">(Thắng x3 + Hòa x1)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tổng Trận Đã Đấu</div>
+                    <div class="stat-val" id="profTotalMatches">0</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">(Chỉ tính trận hoàn thành)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tỷ Lệ Thắng</div>
+                    <div class="stat-val" style="color: #16a34a;" id="profWinRate">0%</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Tỷ lệ chiến thắng</div>
+                </div>
+            </div>
+
+            <!-- Chi tiết Thắng - Hòa - Thua -->
+            <div class="grid-3" style="margin-top: 16px;">
+                <div class="stat-box" style="border-left: 4px solid #16a34a;">
+                    <div class="stat-label" style="color: #16a34a;">Số Trận Thắng (W)</div>
+                    <div class="stat-val" style="color: #16a34a;" id="profWins">0</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">+3 điểm / trận</div>
+                </div>
+                <div class="stat-box" style="border-left: 4px solid #eab308;">
+                    <div class="stat-label" style="color: #ca8a04;">Số Trận Hòa (D)</div>
+                    <div class="stat-val" style="color: #ca8a04;" id="profDraws">0</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">+1 điểm / trận</div>
+                </div>
+                <div class="stat-box" style="border-left: 4px solid #dc2626;">
+                    <div class="stat-label" style="color: #dc2626;">Số Trận Thua (L)</div>
+                    <div class="stat-val" style="color: #dc2626;" id="profLosses">0</div>
+                    <div style="font-size: 0.85rem; color: #64748b;">0 điểm / trận</div>
+                </div>
+            </div>
+
+            <!-- Quy tắc tính điểm và xếp hạng minh bạch -->
+            <div class="card" style="margin-top: 28px; background: #f8fafc;">
+                <h4 style="margin-top: 0; color: #0f172a;">📜 Quy Tắc Tính Điểm & Xếp Hạng Toàn Server</h4>
+                <ul style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin-bottom: 0;">
+                    <li><strong>Công thức tính điểm:</strong> <code>total_points = wins * 3 + draws</code></li>
+                    <li><strong>Quy định trận đấu:</strong> Chỉ tính kết quả các trận thuộc chế độ <em>Thi đấu thường</em> đã hoàn thành hợp lệ. Không tính các trận đấu giải hoặc yêu cầu chưa được chấp nhận.</li>
+                    <li><strong>Tiêu chí xếp hạng:</strong> Sắp xếp theo Tổng điểm giảm dần. Nếu bằng điểm, ưu tiên tuyển thủ có số trận thắng cao hơn.</li>
+                    <li><strong>Bảo toàn dữ liệu:</strong> Mỗi trận đấu áp dụng cơ chế xác thực cờ kết quả (Idempotent), đảm bảo không bao giờ bị cộng điểm trùng lặp.</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = getAuthToken();
+            if (!token) {
+                document.getElementById('authPrompt').style.display = 'block';
+                return;
+            }
+
+            fetch(`${API_BASE}/api/users/profile`, { headers: authHeaders() })
+                .then(res => {
+                    if (!res.ok) throw new Error("Chưa đăng nhập");
+                    return res.json();
+                })
+                .then(data => {
+                    document.getElementById('profileSection').style.display = 'block';
+                    document.getElementById('profUsername').innerText = data.username;
+                    document.getElementById('profUserId').innerText = '#' + data.user_id;
+                    document.getElementById('profRankBadge').innerText = `Thứ Hạng Toàn Server: #${data.server_rank}`;
+                    document.getElementById('profPoints').innerText = data.total_points;
+                    document.getElementById('profTotalMatches').innerText = data.total_matches;
+                    document.getElementById('profWinRate').innerText = data.win_rate + '%';
+                    document.getElementById('profWins').innerText = data.wins;
+                    document.getElementById('profDraws').innerText = data.draws;
+                    document.getElementById('profLosses').innerText = data.losses;
+                })
+                .catch(() => {
+                    document.getElementById('authPrompt').style.display = 'block';
+                });
+        });
+    </script>
+</body>
+</html>

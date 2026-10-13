@@ -1,0 +1,39 @@
+{
+  "match_id": "match_0001",
+  "stage": "round_of_16",
+  "group": null,
+  "format": "BO3",
+  "status": "COMPLETED",
+  "red_team": {
+    "id": 1,
+    "name": "UET_Dragons",
+    "bot": "AlphaRock_v2"
+  },
+  "blue_team": {
+    "id": 12,
+    "name": "NeuralNinjas",
+    "bot": "StealthPaper"
+  },
+  "score": {
+    "red": 2,
+    "blue": 0
+  },
+  "winner": "RED",
+  "winner_team": "UET_Dragons",
+  "games_count": 0,
+  "games": [
+    {
+      "game_id": "game_01",
+      "winner": "RED",
+      "total_turns": 42,
+      "reason": "Red reached destination [8, 8]"
+    },
+    {
+      "game_id": "game_02",
+      "winner": "RED",
+      "total_turns": 36,
+      "reason": "Red captured all Blue scissors"
+    }
+  ],
+  "created_at": "2026-10-11T12:29:12.525426+00:00"
+}

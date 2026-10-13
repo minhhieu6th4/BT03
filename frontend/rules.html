@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luật Chơi - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .rules-hero {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 36px 28px;
+            border-radius: 12px;
+            margin-bottom: 28px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        }
+        .rules-nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .rules-nav a {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            transition: all 0.2s;
+        }
+        .rules-nav a:hover {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        .rule-card {
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+        .rule-card h3 {
+            margin-top: 0;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 12px;
+        }
+        .combat-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin: 18px 0;
+        }
+        .combat-box {
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .combat-rock { background: #fef2f2; border-color: #fca5a5; }
+        .combat-scissors { background: #eff6ff; border-color: #93c5fd; }
+        .combat-paper { background: #f0fdf4; border-color: #86efac; }
+        .combat-tie { background: #fefce8; border-color: #fde047; }
+        .piece-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .piece-pill-red { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .piece-pill-blue { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+        .code-snippet {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            position: relative;
+            line-height: 1.5;
+        }
+        .code-badge {
+            display: inline-block;
+            background: #334155;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .win-condition-item {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: #f8fafc;
+            border-left: 5px solid #3b82f6;
+        }
+        .win-icon {
+            font-size: 1.8rem;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html" class="active">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Banner giới thiệu luật chơi -->
+        <div class="rules-hero">
+            <h2 style="margin: 0 0 10px 0; font-size: 2rem;">📖 Luật Chơi Cờ Oẳn Tù Tì (Rock-Paper-Scissors Chess)</h2>
+            <p style="margin: 0; font-size: 1.05rem; opacity: 0.95; line-height: 1.6;">
+                UET Algorithm Battle là sàn đấu đối kháng thuật toán cờ trí tuệ nhân tạo trên bàn cờ 9x9.
+                Mỗi người chơi lập trình một Bot Python tự động ra quyết định di chuyển quân, tính toán chiến thuật tấn công căn cứ đối phương và tiêu diệt quân địch.
+            </p>
+        </div>
+
+        <!-- Mục lục nhanh -->
+        <div class="rules-nav">
+            <span style="font-weight: bold; color: #475569; padding: 6px 8px;">Mục lục:</span>
+            <a href="#section-board">1. Bàn Cờ & Bố Trí</a>
+            <a href="#section-movement">2. Luật Di Chuyển</a>
+            <a href="#section-combat">3. Quy Tắc Giao Tranh</a>
+            <a href="#section-win">4. Điều Kiện Thắng - Thua</a>
+            <a href="#section-scoring">5. Điểm Số Server</a>
+            <a href="#section-bot">6. Hướng Dẫn Viết Bot AI</a>
+        </div>
+
+        <!-- 1. Bàn Cờ & Bố Trí Ban Đầu -->
+        <div class="rule-card" id="section-board">
+            <h3><span>🏁</span> 1. Bàn Cờ & Bố Trí Ban Đầu (9x9 Grid)</h3>
+            <p>Trận đấu diễn ra trên bàn cờ vuông <strong>9x9 ô</strong> (hàng từ <code>0</code> đến <code>8</code>, cột từ <code>0</code> đến <code>8</code>):</p>
+            <ul>
+                <li>
+                    <strong style="color: #ef4444;">🔴 Phe Đỏ (RED)</strong>:
+                    Xuất phát ở góc trên bên trái. Căn cứ chính của Đỏ tại ô <strong>(0, 0)</strong>.
+                    Gồm <strong>6 quân cờ</strong>:
+                    <ul>
+                        <li><span class="piece-pill piece-pill-red">🪨 2 Búa / Đá (Rock)</span> đặt tại: <code>(0, 1)</code> và <code>(0, 2)</code></li>
+                        <li><span class="piece-pill piece-pill-red">📄 2 Bao / Giấy (Paper)</span> đặt tại: <code>(1, 0)</code> và <code>(2, 0)</code></li>
+                        <li><span class="piece-pill piece-pill-red">✂️ 2 Kéo (Scissors)</span> đặt tại: <code>(1, 1)</code> và <code>(2, 2)</code></li>
+                    </ul>
+                </li>
+                <li style="margin-top: 12px;">
+                    <strong style="color: #3b82f6;">🔵 Phe Xanh (BLUE)</strong>:
+                    Xuất phát ở góc dưới bên phải. Căn cứ chính của Xanh tại ô <strong>(8, 8)</strong>.
+                    Gồm <strong>6 quân cờ</strong>:
+                    <ul>
+                        <li><span class="piece-pill piece-pill-blue">🪨 2 Búa / Đá (Rock)</span> đặt tại: <code>(8, 7)</code> và <code>(8, 6)</code></li>
+                        <li><span class="piece-pill piece-pill-blue">📄 2 Bao / Giấy (Paper)</span> đặt tại: <code>(7, 8)</code> và <code>(6, 8)</code></li>
+                        <li><span class="piece-pill piece-pill-blue">✂️ 2 Kéo (Scissors)</span> đặt tại: <code>(7, 7)</code> và <code>(6, 6)</code></li>
+                    </ul>
+                </li>
+            </ul>
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: 0.9rem; color: #475569;">
+                💡 <strong>Lưu ý:</strong> Phe Đỏ (RED) luôn luôn là bên được đi trước ở Lượt 1. Phe Xanh (BLUE) đi ở lượt kế tiếp, luân phiên nhau cho đến khi trận đấu kết thúc.
+            </div>
+        </div>
+
+        <!-- 2. Luật Di Chuyển -->
+        <div class="rule-card" id="section-movement">
+            <h3><span>🧭</span> 2. Luật Di Chuyển Quân Cờ</h3>
+            <p>Mỗi lượt đi của Bot phải tuân theo các quy định nghiêm ngặt sau:</p>
+            <ol style="line-height: 1.8;">
+                <li>
+                    <strong>Di chuyển 1 ô trong 8 hướng</strong>:
+                    Quân cờ có thể đi sang một trong 8 ô lân cận (ngang, dọc, hoặc chéo).
+                    Khoảng cách tọa độ di chuyển tối đa là 1: <code>max(|r1 - r2|, |c1 - c2|) == 1</code>.
+                </li>
+                <li>
+                    <strong>Không được đi vào ô có quân cùng phe</strong>:
+                    Bạn không thể di chuyển quân đến ô đang có một quân khác của đội mình.
+                </li>
+                <li>
+                    <strong>Tuyệt đối cấm vào căn cứ của chính mình (Own Base Forbidden)</strong>:
+                    <ul>
+                        <li>Quân của <strong style="color: #ef4444;">Đỏ (RED)</strong> không được di chuyển vào hoặc quay lại ô căn cứ nhà <code>(0, 0)</code>.</li>
+                        <li>Quân của <strong style="color: #3b82f6;">Xanh (BLUE)</strong> không được di chuyển vào hoặc quay lại ô căn cứ nhà <code>(8, 8)</code>.</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Đi vào ô có quân địch</strong>:
+                    Quân cờ hoàn toàn được phép đi vào ô đang có quân đối phương. Khi đó, cơ chế giao tranh Oẳn Tù Tì sẽ được kích hoạt!
+                </li>
+            </ol>
+        </div>
+
+        <!-- 3. Cơ Chế Giao Tranh -->
+        <div class="rule-card" id="section-combat">
+            <h3><span>⚔️</span> 3. Cơ Chế Giao Tranh (Oẳn Tù Tì / Rock-Paper-Scissors)</h3>
+            <p>Khi một quân cờ di chuyển vào ô có quân địch, hai quân sẽ đọ sức theo nguyên lý Oẳn Tù Tì kinh điển:</p>
+
+            <div class="combat-diagram">
+                <div class="combat-box combat-rock">
+                    <div style="font-size: 2rem;">🪨 ➔ ✂️</div>
+                    <strong style="color: #b91c1c;">Đá Thắng Kéo</strong>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Đá đập gãy Kéo, Kéo bị tiêu diệt!</div>
+                </div>
+
+                <div class="combat-box combat-scissors">
+                    <div style="font-size: 2rem;">✂️ ➔ 📄</div>
+                    <strong style="color: #1d4ed8;">Kéo Thắng Bao</strong>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Kéo cắt nát Bao, Bao bị tiêu diệt!</div>
+                </div>
+
+                <div class="combat-box combat-paper">
+                    <div style="font-size: 2rem;">📄 ➔ 🪨</div>
+                    <strong style="color: #15803d;">Bao Thắng Đá</strong>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Bao bọc lấy Đá, Đá bị tiêu diệt!</div>
+                </div>
+
+                <div class="combat-box combat-tie">
+                    <div style="font-size: 2rem;">💥 💥</div>
+                    <strong style="color: #a16207;">Cùng Loại = Cùng Chết</strong>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Hai quân cùng loại (Đá-Đá, Kéo-Kéo, Bao-Bao) sẽ <strong>hủy diệt lẫn nhau</strong>!</div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.95rem; color: #334155; line-height: 1.6;">
+                ⚠️ <strong>Quy tắc Hủy Diệt Đôi Bên (Mutual Destruction):</strong>
+                Nếu quân tấn công và quân phòng thủ cùng một loại (ví dụ Kéo tấn công Kéo), <strong>cả hai quân đều bị loại khỏi bàn cờ</strong> và ô đó trở thành ô trống! Đây là một điểm chiến thuật rất quan trọng để thí quân phá thế đối thủ.
+            </p>
+        </div>
+
+        <!-- 4. Điều Kiện Thắng - Thua -->
+        <div class="rule-card" id="section-win">
+            <h3><span>🏆</span> 4. Điều Kiện Phân Định Thắng - Thua - Hòa</h3>
+            <p>Trận đấu sẽ kết thúc ngay lập tức khi xảy ra một trong các trường hợp sau:</p>
+
+            <div class="win-condition-item" style="border-left-color: #16a34a;">
+                <div class="win-icon">🚩</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; color: #15803d;">1. Chiếm Căn Cứ Đối Phương (Base Infiltration)</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: #334155;">
+                        • Nếu <strong>Đỏ (RED)</strong> đưa được bất kỳ quân nào đặt chân vào ô <strong>(8, 8)</strong> (căn cứ Xanh) ➔ <strong>ĐỎ THẮNG NGAY LẬP TỨC!</strong><br>
+                        • Nếu <strong>Xanh (BLUE)</strong> đưa được bất kỳ quân nào đặt chân vào ô <strong>(0, 0)</strong> (căn cứ Đỏ) ➔ <strong>XANH THẮNG NGAY LẬP TỨC!</strong>
+                    </p>
+                </div>
+            </div>
+
+            <div class="win-condition-item" style="border-left-color: #ea580c;">
+                <div class="win-icon">💀</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; color: #c2410c;">2. Bị Tiêu Diệt Toàn Bộ Quân Cờ (Total Piece Elimination)</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: #334155;">
+                        Nếu một bên <strong>bị tiêu diệt sạch toàn bộ quân cờ của mình trên bàn đấu (không còn bất kỳ quân nào)</strong> trong khi đối phương vẫn còn ít nhất 1 quân ➔ <strong>Bên bị mất sạch toàn bộ quân BỊ XỬ THUA NGAY LẬP TỨC!</strong>
+                    </p>
+                </div>
+            </div>
+
+            <div class="win-condition-item" style="border-left-color: #dc2626;">
+                <div class="win-icon">⛔</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; color: #b91c1c;">3. Xử Thua Kỹ Thuật (Disqualification / Crash / Timeout)</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: #334155;">
+                        Một bot sẽ bị xử thua kỹ thuật ngay nếu vi phạm bất kỳ điều nào sau đây:
+                        <br>• <strong>Crash / Syntax Error</strong>: Ném ngoại lệ hoặc mã nguồn bị lỗi trong lúc chạy.
+                        <br>• <strong>Invalid Move</strong>: Trả về nước đi không đúng luật (đi quá 1 ô, đi vào căn cứ mình, đi vào ô đồng đội).
+                        <br>• <strong>Timeout</strong>: Thời gian xử lý của bot vượt quá <strong>2.0 giây</strong> cho một nước đi.
+                        <br>• <strong>Invalid Format</strong>: Trả về sai cấu trúc JSON quy định.
+                    </p>
+                </div>
+            </div>
+
+            <div class="win-condition-item" style="border-left-color: #64748b;">
+                <div class="win-icon">🤝</div>
+                <div>
+                    <h4 style="margin: 0 0 4px 0; color: #334155;">4. Hòa Cờ (Draw)</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: #334155;">
+                        Trận đấu được tính là HÒA nếu:
+                        <br>• Trận đấu chạm giới hạn <strong>200 lượt (max_turns = 200)</strong> mà chưa bên nào đạt điều kiện thắng.
+                        <br>• Hoặc cả hai phe cùng lúc mất sạch toàn bộ quân cờ trong cùng một pha giao tranh hủy diệt kép.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Điểm Số & Xếp Hạng Server -->
+        <div class="rule-card" id="section-scoring">
+            <h3><span>📊</span> 5. Cơ Chế Tính Điểm & Xếp Hạng Server</h3>
+            <p>Sau mỗi trận đấu thường kết thúc, hệ thống tự động cập nhật điểm số vào Bảng Xếp Hạng toàn server:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 14px;">
+                <div class="stat-box" style="border-top: 4px solid #16a34a;">
+                    <div class="stat-val" style="color: #16a34a;">+3 Điểm</div>
+                    <div class="stat-label">🏆 CHIẾN THẮNG</div>
+                </div>
+                <div class="stat-box" style="border-top: 4px solid #eab308;">
+                    <div class="stat-val" style="color: #ca8a04;">+1 Điểm</div>
+                    <div class="stat-label">🤝 HÒA TRẬN</div>
+                </div>
+                <div class="stat-box" style="border-top: 4px solid #ef4444;">
+                    <div class="stat-val" style="color: #dc2626;">0 Điểm</div>
+                    <div class="stat-label">❌ THẤT BẠI</div>
+                </div>
+            </div>
+            <p style="color: #64748b; font-size: 0.9rem; margin-top: 14px;">
+                Tiêu chí xếp hạng trên Leaderboard: <strong>Tổng điểm cao hơn</strong> ➔ Số trận thắng nhiều hơn ➔ Tỉ lệ thắng (%) cao hơn.
+            </p>
+        </div>
+
+        <!-- 6. Hướng Dẫn Viết Bot AI -->
+        <div class="rule-card" id="section-bot">
+            <h3><span>🤖</span> 6. Hướng Dẫn Lập Trình Bot AI (Python API)</h3>
+            <p>Hệ thống hỗ trợ nộp mã nguồn Python (<code>.py</code>). Bot của bạn cần định nghĩa class <code>Bot</code> và hàm <code>get_move(state)</code>.</p>
+
+            <h4>📥 1. Dữ liệu đầu vào (<code>state: dict</code>)</h4>
+            <p>Mỗi lượt, hàm <code>get_move(state)</code> sẽ nhận một dictionary gồm:</p>
+            <div class="code-snippet">
+<span class="code-badge">JSON State Input</span>
+{
+    "turn": 1,              <span style="color: #94a3b8;"># Lượt chơi hiện tại</span>
+    "team": "RED",          <span style="color: #94a3b8;"># Phe của bot: "RED" hoặc "BLUE"</span>
+    "board": [              <span style="color: #94a3b8;"># Ma trận 9x9 biểu diễn bàn cờ</span>
+        [0, 1, 1, 0, 0, 0, 0, 0, 0],
+        [2, 3, 0, 0, 0, 0, 0, 0, 0],
+        ...
+    ],
+    "legal_moves": [        <span style="color: #94a3b8;"># Danh sách toàn bộ các nước đi hợp lệ đã lọc sẵn</span>
+        {"from": [0, 1], "to": [0, 2]},
+        {"from": [1, 1], "to": [1, 2]},
+        ...
+    ]
+}
+            </div>
+
+            <div style="margin-top: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px;">
+                <strong>Ý nghĩa giá trị các ô trong ma trận <code>board</code>:</strong>
+                <ul style="margin: 8px 0 0 0; line-height: 1.6; font-size: 0.92rem;">
+                    <li><code>0</code>: Ô trống.</li>
+                    <li><code>1</code>: Quân Đỏ - Đá (Rock 🪨) | <code>2</code>: Quân Đỏ - Bao (Paper 📄) | <code>3</code>: Quân Đỏ - Kéo (Scissors ✂️)</li>
+                    <li><code>4</code>: Quân Xanh - Đá (Rock 🪨) | <code>5</code>: Quân Xanh - Bao (Paper 📄) | <code>6</code>: Quân Xanh - Kéo (Scissors ✂️)</li>
+                </ul>
+            </div>
+
+            <h4 style="margin-top: 20px;">📤 2. Dữ liệu Bot cần trả về</h4>
+            <p>Bot cần trả về một dictionary chỉ định tọa độ quân đi và tọa độ đích đến:</p>
+            <div class="code-snippet">
+<span class="code-badge">Bot Return Value</span>
+{
+    "from": [hang_bat_dau, cot_bat_dau],
+    "to": [hang_dich_den, cot_dich_den]
+}
+            </div>
+
+            <h4 style="margin-top: 20px;">⚡ 3. Mã Nguồn Mẫu (Sample Bot Python)</h4>
+            <p>Dưới đây là một Bot hoàn chỉnh có thể nộp và thi đấu được ngay:</p>
+            <div class="code-snippet">
+<span class="code-badge">student_bot.py</span>
+import random
+
+class Bot:
+    def __init__(self):
+        # Khởi tạo chiến thuật, biến nhớ (nếu có)
+        pass
+
+    def get_move(self, state: dict) -> dict:
+        """
+        Nhận trạng thái bàn cờ và trả về nước đi hợp lệ.
+        Thời gian giới hạn: < 2.0 giây.
+        """
+        legal_moves = state.get("legal_moves", [])
+        my_team = state.get("team") # "RED" hoặc "BLUE"
+        board = state.get("board")
+
+        # Chiến thuật 1: Nếu có nước đi chiếm ngay căn cứ đối phương -> Ưu tiên đi ngay!
+        target_base = [8, 8] if my_team == "RED" else [0, 0]
+        for move in legal_moves:
+            if move["to"] == target_base:
+                return move
+
+        # Chiến thuật 2: Nếu không chiếm được căn cứ, chọn ngẫu nhiên một nước đi hợp lệ
+        if legal_moves:
+            return random.choice(legal_moves)
+
+        # Fallback (phòng hờ)
+        return {"from": [0, 1], "to": [0, 2]}
+            </div>
+
+            <!-- Nút hành động kêu gọi nộp bot và thi đấu -->
+            <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="submit.html" class="btn btn-primary" style="padding: 10px 20px; font-size: 1rem;">🤖 Nộp Bot Của Bạn Ngay ➔</a>
+                <a href="rooms.html" class="btn btn-success" style="padding: 10px 20px; font-size: 1rem;">⚔️ Tạo Hoặc Vào Phòng Thi Đấu ➔</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+</body>
+</html>

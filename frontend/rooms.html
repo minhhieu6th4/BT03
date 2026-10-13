@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sảnh Thi Đấu Thường - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html" class="active">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
+            <div>
+                <h2 style="margin: 0 0 6px 0;">⚔️ Sảnh Thi Đấu Thường (1v1)</h2>
+                <p style="margin: 0; color: #64748b;">Tham gia hoặc tạo phòng thách đấu 2 người. Điểm cộng trực tiếp vào bảng xếp hạng server.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()">➕ Tạo Phòng Mới</button>
+        </div>
+
+        <!-- 3 Lựa Chọn Thao Tác Nhanh -->
+        <div class="grid-2" style="margin-bottom: 30px;">
+            <div class="card" style="border-left: 4px solid #2563eb;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 8px;">🔑 1. Nhập Mã Phòng Để Tham Gia</h3>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 12px;">Nhập ID hoặc mã phòng (ROOM CODE) bạn nhận được từ đối thủ:</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="joinRoomInput" placeholder="Ví dụ: ROOM-01 hoặc Mã 6 ký tự" style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; text-transform: uppercase;">
+                    <button class="btn btn-primary" onclick="joinByCode()">Gửi Yêu Cầu</button>
+                </div>
+            </div>
+
+            <div class="card" style="border-left: 4px solid #16a34a;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 8px;">➕ 2. Tạo Phòng Riêng Của Bạn</h3>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 12px;">Trở thành chủ phòng, chia sẻ mã phòng và duyệt các yêu cầu thách đấu:</p>
+                <button class="btn btn-success" onclick="openCreateModal()">Tạo Phòng Ngay ➔</button>
+            </div>
+        </div>
+
+        <!-- Danh Sách Phòng Đang Mở (3) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+            <h3 style="margin: 0;">🌐 3. Danh Sách Phòng Đang Mở (Chờ Đối Thủ)</h3>
+            <button class="btn btn-outline" onclick="loadOpenRooms()" style="font-size: 0.85rem;">🔄 Làm Mới</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã Phòng</th>
+                        <th>Tên Phòng</th>
+                        <th>Chủ Phòng</th>
+                        <th>Trạng Thái</th>
+                        <th>Người Chơi</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="openRoomsBody">
+                    <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Đang tải danh sách phòng...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal Tạo Phòng -->
+        <div id="createModal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>Tạo Phòng Thách Đấu Mới</h3>
+                <p style="color: #64748b; font-size: 0.9rem;">Bạn sẽ là chủ phòng (Player 1) và có toàn quyền duyệt yêu cầu tham gia.</p>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Tên phòng:</label>
+                    <input type="text" id="roomNameInput" placeholder="Ví dụ: Đại chiến búa kéo bao" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="closeCreateModal()">Hủy</button>
+                    <button class="btn btn-primary" onclick="submitCreateRoom()">Tạo Phòng</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        function openCreateModal() {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập trước khi tạo phòng!");
+                window.location.href = "login.html";
+                return;
+            }
+            document.getElementById('createModal').style.display = 'flex';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+
+        function submitCreateRoom() {
+            const name = document.getElementById('roomNameInput').value.trim() || "Phòng thách đấu";
+            fetch(`${API_BASE}/api/rooms/`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ name: name })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi tạo phòng"); });
+                return res.json();
+            })
+            .then(data => {
+                closeCreateModal();
+                window.location.href = `room_detail.html?id=${data.id}`;
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function joinByCode() {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập để gửi yêu cầu tham gia phòng!");
+                window.location.href = "login.html";
+                return;
+            }
+            const code = document.getElementById('joinRoomInput').value.trim();
+            if (!code) {
+                alert("Vui lòng nhập ID hoặc Mã phòng!");
+                return;
+            }
+
+            fetch(`${API_BASE}/api/rooms/${encodeURIComponent(code)}/join`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Không thể gửi yêu cầu"); });
+                return res.json();
+            })
+            .then(data => {
+                alert("Đã gửi yêu cầu tham gia tới chủ phòng thành công! Đang chuyển đến phòng...");
+                window.location.href = `room_detail.html?id=${data.room_id}`;
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function sendJoinRequest(roomId) {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập để gửi yêu cầu tham gia!");
+                window.location.href = "login.html";
+                return;
+            }
+            fetch(`${API_BASE}/api/rooms/${roomId}/join`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Không thể gửi yêu cầu"); });
+                return res.json();
+            })
+            .then(data => {
+                alert("Đã gửi yêu cầu tham gia tới chủ phòng! Đang chuyển đến phòng...");
+                window.location.href = `room_detail.html?id=${data.room_id}`;
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function loadOpenRooms() {
+            fetch(`${API_BASE}/api/rooms/`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('openRoomsBody');
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">Hiện không có phòng nào đang mở. Hãy tạo phòng mới!</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.map(r => `
+                        <tr>
+                            <td><strong style="color: #2563eb; font-family: monospace; font-size: 1.05rem;">${r.room_code}</strong></td>
+                            <td><strong>${r.name}</strong></td>
+                            <td>${r.owner_name}</td>
+                            <td><span class="badge badge-waiting">${r.status}</span></td>
+                            <td>${r.current_player_count}/${r.capacity}</td>
+                            <td>
+                                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.85rem;" onclick="sendJoinRequest(${r.id})">Yêu Cầu Tham Gia</button>
+                                <a href="room_detail.html?id=${r.id}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.85rem; margin-left: 4px;">Vào Phòng</a>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(() => {
+                    document.getElementById('openRoomsBody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Lỗi tải danh sách phòng!</td></tr>`;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOpenRooms();
+            // Tự động làm mới danh sách phòng mỗi 5 giây
+            setInterval(loadOpenRooms, 5000);
+        });
+    </script>
+</body>
+</html>

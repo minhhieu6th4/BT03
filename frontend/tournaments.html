@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giải Đấu Knockout - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html" class="active">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
+            <div>
+                <h2 style="margin: 0 0 6px 0;">🏆 Giải Đấu Loại Trực Tiếp (Knockout)</h2>
+                <p style="margin: 0; color: #64748b;">Hệ thống chia nhánh tự động, duyệt tuyển thủ, hạn chót 10 phút và xử lý suất đặc cách (BYE) cho mọi N ≥ 4.</p>
+            </div>
+            <button class="btn btn-success" onclick="openCreateTournamentModal()">➕ Tạo Giải Đấu Mới</button>
+        </div>
+
+        <div class="card" style="background: #f8fafc; border-left: 4px solid #10b981; margin-bottom: 24px;">
+            <h4 style="margin: 0 0 6px 0;">📌 Thể Thức & Quy Định Thi Đấu Knockout</h4>
+            <p style="margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                • <strong>Số lượng tuyển thủ:</strong> Yêu cầu tối thiểu <strong>4 người chơi</strong> được người tổ chức chấp thuận mới có thể bắt đầu.<br>
+                • <strong>Suất đặc cách (BYE):</strong> Nếu số lượng người chơi không phải là lũy thừa của 2, hệ thống tự động ngẫu nhiên phân bổ vé BYE tiến thẳng vào vòng trong.<br>
+                • <strong>Hạn giờ 10 phút:</strong> Mỗi trận đấu có thời hạn <strong>10 phút</strong> để cả 2 tuyển thủ điểm danh tham gia. Quá 10 phút, người vắng mặt sẽ bị xử thua kỹ thuật (NO_SHOW / FORFEIT).<br>
+                • <strong>Thi đấu tự động:</strong> Khi cả 2 tuyển thủ cùng điểm danh, Sandbox sẽ tự động cho 2 Bot thi đấu để tìm ra người chiến thắng tiến vào vòng kế tiếp!
+            </p>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên Giải Đấu</th>
+                        <th>Người Tổ Chức</th>
+                        <th>Trạng Thái</th>
+                        <th>Quy Mô & Tuyển Thủ</th>
+                        <th>Nhà Vô Địch</th>
+                        <th>Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="tournamentsBody">
+                    <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Đang tải danh sách giải đấu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal Tạo Giải Đấu -->
+        <div id="createTournModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 520px;">
+                <h3>Tạo Giải Đấu Knockout Mới</h3>
+                <p style="color: #64748b; font-size: 0.9rem;">Giải đấu sẽ mở cổng cho các đấu thủ nộp yêu cầu tham gia cùng Bot Python.</p>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Tên giải đấu (*):</label>
+                    <input type="text" id="tournNameInput" placeholder="Ví dụ: UET Spring Championship 2026" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Mô tả:</label>
+                    <textarea id="tournDescInput" rows="2" placeholder="Mô tả thể lệ hoặc giải thưởng..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;"></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Số người tối thiểu:</label>
+                        <input type="number" id="tournMinInput" value="4" min="4" max="64" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <small style="color: #64748b;">Ít nhất 4 người</small>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Số người tối đa:</label>
+                        <input type="number" id="tournMaxInput" value="16" min="4" max="64" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <small style="color: #64748b;">Ví dụ: 8, 16, 32</small>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="closeCreateTournamentModal()">Hủy</button>
+                    <button class="btn btn-success" onclick="submitCreateTournament()">Tạo Giải Đấu</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        function openCreateTournamentModal() {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập trước khi tạo giải đấu!");
+                window.location.href = "login.html";
+                return;
+            }
+            document.getElementById('createTournModal').style.display = 'flex';
+        }
+
+        function closeCreateTournamentModal() {
+            document.getElementById('createTournModal').style.display = 'none';
+        }
+
+        function submitCreateTournament() {
+            const name = document.getElementById('tournNameInput').value.trim();
+            const desc = document.getElementById('tournDescInput').value.trim();
+            const minP = parseInt(document.getElementById('tournMinInput').value) || 4;
+            const maxP = parseInt(document.getElementById('tournMaxInput').value) || 16;
+
+            if (!name) {
+                alert("Vui lòng nhập tên giải đấu!");
+                return;
+            }
+            if (minP < 4) {
+                alert("Số người chơi tối thiểu phải từ 4 trở lên!");
+                return;
+            }
+            if (maxP < minP) {
+                alert("Số người chơi tối đa phải lớn hơn hoặc bằng số tối thiểu!");
+                return;
+            }
+
+            fetch(`${API_BASE}/api/tournaments/`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    name: name,
+                    description: desc,
+                    min_participants: minP,
+                    max_participants: maxP
+                })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi tạo giải"); });
+                return res.json();
+            })
+            .then(data => {
+                closeCreateTournamentModal();
+                window.location.href = `tournament_detail.html?id=${data.id}`;
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function loadTournaments() {
+            fetch(`${API_BASE}/api/tournaments/`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('tournamentsBody');
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Chưa có giải đấu nào được tạo. Hãy tạo giải đấu đầu tiên!</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.map(t => {
+                        let statusBadge = 'badge-waiting';
+                        let statusText = t.status;
+                        if (t.status === 'IN_PROGRESS') {
+                            statusBadge = 'badge-playing';
+                            statusText = 'Đang Thi Đấu';
+                        } else if (t.status === 'COMPLETED') {
+                            statusBadge = 'badge-ready';
+                            statusText = 'Đã Kết Thúc';
+                        } else if (t.status === 'REGISTRATION_OPEN' || t.status === 'REGISTRATION') {
+                            statusBadge = 'badge-waiting';
+                            statusText = 'Mở Đăng Ký';
+                        }
+
+                        return `
+                            <tr>
+                                <td>#${t.id}</td>
+                                <td><strong style="color: #1e293b; font-size: 1.05rem;">${t.name}</strong></td>
+                                <td>${t.creator_name || 'Admin'}</td>
+                                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                                <td>
+                                    <div style="font-size: 0.9rem;">
+                                        Đã duyệt: <strong>${t.accepted_count || 0}</strong>/${t.max_participants || 32}
+                                    </div>
+                                    ${t.pending_count > 0 ? `<div style="font-size: 0.8rem; color: #f59e0b;">(Đang chờ duyệt: ${t.pending_count})</div>` : ''}
+                                </td>
+                                <td>${t.champion_name ? '🏆 <strong style="color: #16a34a;">' + t.champion_name + '</strong>' : '<span style="color: #94a3b8;">Chưa xác định</span>'}</td>
+                                <td>
+                                    <a href="tournament_detail.html?id=${t.id}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none;">Chi Tiết & Nhánh Đấu</a>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                })
+                .catch(() => {
+                    document.getElementById('tournamentsBody').innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Lỗi tải danh sách giải đấu!</td></tr>`;
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTournaments);
+    </script>
+</body>
+</html>

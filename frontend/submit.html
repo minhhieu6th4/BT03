@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Bot Của Tôi - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .bot-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .bot-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; }
+        .version-badge { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; }
+        .err-box { background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; padding: 10px 14px; border-radius: 4px; font-size: 0.88rem; margin-top: 10px; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+        .example-box { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0 25px 0; }
+        .example-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; color: #1e293b; font-size: 0.88rem; font-weight: 500; transition: all 0.2s; }
+        .example-btn:hover { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html" class="active">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h2 style="margin: 0 0 4px 0;">🤖 Quản Lý Bot Của Tôi</h2>
+                <p style="color: #64748b; margin: 0;">Nộp code Python, quản lý phiên bản (v1, v2...) và kiểm tra tự động qua Docker Sandbox.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewBotModal()">+ Nộp Bot Mới</button>
+        </div>
+
+        <!-- Tải Bot Mẫu & Tài Liệu API -->
+        <div style="margin-top: 24px;">
+            <strong style="color: #475569; font-size: 0.95rem;">📥 Tải Bot Mẫu & Hướng Dẫn Kỹ Thuật:</strong>
+            <div class="example-box">
+                <a href="/api/bots/examples/aggressive" class="example-btn" style="border-color: #ef4444; color: #dc2626;" download="aggressive_bot.py">⚔️ Tải <strong>AggressiveBot (Tấn Công)</strong> (.py)</a>
+                <a href="/api/bots/examples/tactical" class="example-btn" style="border-color: #2563eb; color: #1d4ed8;" download="tactical_bot.py">🛡️ Tải <strong>TacticalBot (Chiến Thuật)</strong> (.py)</a>
+                <a href="/api/bots/examples/random" class="example-btn" download="random_bot.py">🎲 Tải <strong>RandomBot</strong> (.py)</a>
+                <a href="/api/bots/examples/greedy" class="example-btn" download="greedy_bot.py">🎯 Tải <strong>GreedyBot</strong> (.py)</a>
+                <a href="docs/bot-api.md" target="_blank" class="example-btn" style="border-color: #8b5cf6; color: #6d28d9;">📖 Hướng Dẫn Bot API</a>
+            </div>
+        </div>
+
+        <!-- Thông báo đăng nhập nếu chưa đăng nhập -->
+        <div id="authPrompt" class="card" style="display: none; text-align: center; margin-top: 20px; background: #fffbeb; border: 1px solid #fef3c7;">
+            <p style="font-size: 1.05rem; color: #92400e; margin-bottom: 12px;">Bạn cần đăng nhập để quản lý và nộp Bot thi đấu.</p>
+            <a href="login.html" class="btn btn-primary">Đăng Nhập Ngay</a>
+        </div>
+
+        <!-- Danh sách Bot đã nộp -->
+        <div id="botsSection" style="margin-top: 20px; display: none;">
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Danh Sách Bot Đã Nộp (<span id="botCount">0</span>)</h3>
+            <div id="botsList">
+                <p style="color: #94a3b8;">Đang tải danh sách bot...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Nộp Bot Mới -->
+    <div id="newBotModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 style="margin-top: 0;">📤 Nộp Bot Mới</h3>
+            <form id="newBotForm" onsubmit="handleNewBotSubmit(event)">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Tên Bot:</label>
+                    <input type="text" id="newBotName" required placeholder="Ví dụ: Chiến Thần Alpha" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Mô tả chiến thuật (tùy chọn):</label>
+                    <input type="text" id="newBotDesc" placeholder="Ví dụ: Ưu tiên chiếm căn cứ đối thủ" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">File code Python (.py):</label>
+                    <input type="file" id="newBotFile" accept=".py" required style="width: 100%; padding: 6px;">
+                    <small style="color: #64748b; display: block; margin-top: 4px;">File phải chứa class <code>Bot</code> và phương thức <code>get_move(self, state_dict)</code>.</small>
+                </div>
+                <div id="newBotStatus" style="margin-bottom: 15px; font-weight: bold; font-size: 0.9rem;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('newBotModal')">Hủy</button>
+                    <button type="submit" id="btnUploadNew" class="btn btn-primary">Kiểm Tra & Tải Lên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nộp Phiên Bản Mới (Update Version) -->
+    <div id="updateVersionModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 style="margin-top: 0;" id="updateModalTitle">🔄 Nộp Phiên Bản Mới</h3>
+            <p style="color: #64748b; font-size: 0.9rem;" id="updateModalDesc">Nâng cấp thuật toán cho bot mà không làm mất lịch sử các phiên bản cũ.</p>
+            <form id="updateVersionForm" onsubmit="handleUpdateVersionSubmit(event)">
+                <input type="hidden" id="updateBotId">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Chọn File code Python (.py) mới:</label>
+                    <input type="file" id="updateBotFile" accept=".py" required style="width: 100%; padding: 6px;">
+                </div>
+                <div id="updateStatus" style="margin-bottom: 15px; font-weight: bold; font-size: 0.9rem;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('updateVersionModal')">Hủy</button>
+                    <button type="submit" id="btnUploadUpdate" class="btn btn-primary">Xác Nhận Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Xem Lịch Sử Phiên Bản (Version History) -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 style="margin-top: 0;" id="historyTitle">📜 Lịch Sử Phiên Bản</h3>
+            <div id="historyContent" style="max-height: 400px; overflow-y: auto;"></div>
+            <div style="text-align: right; margin-top: 15px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal('historyModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/nav.js"></script>
+    <script>
+        function openNewBotModal() {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập trước khi nộp bot!");
+                window.location.href = 'login.html';
+                return;
+            }
+            document.getElementById('newBotStatus').innerHTML = '';
+            document.getElementById('newBotForm').reset();
+            document.getElementById('newBotModal').style.display = 'flex';
+        }
+
+        function openUpdateModal(botId, botName) {
+            document.getElementById('updateBotId').value = botId;
+            document.getElementById('updateModalTitle').innerText = `🔄 Cập Nhật: ${botName}`;
+            document.getElementById('updateStatus').innerHTML = '';
+            document.getElementById('updateVersionForm').reset();
+            document.getElementById('updateVersionModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        async function loadMyBots() {
+            const token = getAuthToken();
+            if (!token) {
+                document.getElementById('authPrompt').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('botsSection').style.display = 'block';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/`, { headers: authHeaders() });
+                if (!res.ok) throw new Error("Không thể tải danh sách bot");
+                const bots = await res.json();
+
+                document.getElementById('botCount').innerText = bots.length;
+                const container = document.getElementById('botsList');
+
+                if (bots.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; color: #64748b; padding: 30px;">
+                            <p style="font-size: 1.1rem; margin-bottom: 12px;">Bạn chưa nộp Bot nào.</p>
+                            <button class="btn btn-primary" onclick="openNewBotModal()">+ Nộp Bot Đầu Tiên Ngay</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = bots.map(b => {
+                    let badgeClass = 'badge-waiting';
+                    let statusText = b.status;
+                    if (b.status === 'READY') { badgeClass = 'badge-active'; statusText = 'READY (Hợp Lệ)'; }
+                    else if (b.status === 'INVALID') { badgeClass = 'badge-finished'; statusText = 'INVALID (Lỗi)'; }
+                    else if (b.status === 'VALIDATING') { badgeClass = 'badge-playing'; statusText = 'VALIDATING...'; }
+
+                    const createdDate = b.created_at ? new Date(b.created_at).toLocaleString('vi-VN') : 'Mới';
+
+                    return `
+                        <div class="bot-card">
+                            <div class="bot-header">
+                                <div>
+                                    <strong style="font-size: 1.15rem; color: #0f172a;">${escapeHtml(b.name)}</strong>
+                                    <span class="version-badge" style="margin-left: 8px;">v${b.current_version_number}</span>
+                                    <span style="font-size: 0.85rem; color: #64748b; margin-left: 10px;">ID: #${b.id}</span>
+                                </div>
+                                <div>
+                                    <span class="badge ${badgeClass}">${statusText}</span>
+                                </div>
+                            </div>
+
+                            <p style="color: #475569; margin: 4px 0 10px 0; font-size: 0.92rem;">
+                                ${escapeHtml(b.description || "Không có mô tả chiến thuật.")}
+                            </p>
+
+                            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px;">
+                                🕒 Nộp lúc: ${createdDate} | 📁 Tổng số phiên bản đã nộp: <strong>${b.total_versions}</strong>
+                            </div>
+
+                            ${b.validation_error ? `
+                                <div class="err-box">
+                                    <strong>⚠️ Lỗi phát hiện qua Sandbox:</strong><br>${escapeHtml(b.validation_error)}
+                                </div>
+                            ` : ''}
+
+                            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openUpdateModal(${b.id}, '${escapeHtml(b.name)}')">➕ Cập Nhật Bản Mới</button>
+                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="viewHistory(${b.id})">📜 Lịch Sử Phiên Bản</button>
+                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="revalidateBot(${b.id})">🔄 Kiểm Tra Lại</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 0.85rem;" onclick="disableBot(${b.id})">🗑️ Vô Hiệu Hóa</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                document.getElementById('botsList').innerHTML = `<p style="color: #ef4444;">Lỗi kết nối: ${err.message}</p>`;
+            }
+        }
+
+        async function handleNewBotSubmit(e) {
+            e.preventDefault();
+            const statusDiv = document.getElementById('newBotStatus');
+            const submitBtn = document.getElementById('btnUploadNew');
+            const name = document.getElementById('newBotName').value;
+            const desc = document.getElementById('newBotDesc').value;
+            const file = document.getElementById('newBotFile').files[0];
+
+            if (!file) {
+                alert("Vui lòng chọn file .py!");
+                return;
+            }
+
+            statusDiv.innerHTML = '<span style="color: #0284c7;">⏳ Đang gửi file và chạy kiểm tra qua Sandbox...</span>';
+            submitBtn.disabled = true;
+
+            const fd = new FormData();
+            fd.append('name', name);
+            fd.append('description', desc);
+            fd.append('file', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() },
+                    body: fd
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    if (data.status === 'READY') {
+                        statusDiv.innerHTML = '<span style="color: #16a34a;">✅ Bot hợp lệ và sẵn sàng thi đấu!</span>';
+                    } else {
+                        statusDiv.innerHTML = `<span style="color: #dc2626;">❌ Kiểm tra thất bại: ${escapeHtml(data.validation_error || 'Mã bot không hợp lệ')}</span>`;
+                    }
+                    setTimeout(() => {
+                        closeModal('newBotModal');
+                        loadMyBots();
+                    }, 1200);
+                } else {
+                    statusDiv.innerHTML = `<span style="color: #dc2626;">❌ Lỗi: ${escapeHtml(data.detail || 'Không thể upload')}</span>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Lỗi kết nối tới máy chủ</span>';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function handleUpdateVersionSubmit(e) {
+            e.preventDefault();
+            const botId = document.getElementById('updateBotId').value;
+            const file = document.getElementById('updateBotFile').files[0];
+            const statusDiv = document.getElementById('updateStatus');
+            const submitBtn = document.getElementById('btnUploadUpdate');
+
+            if (!file) return;
+
+            statusDiv.innerHTML = '<span style="color: #0284c7;">⏳ Đang nộp phiên bản mới và chạy Sandbox...</span>';
+            submitBtn.disabled = true;
+
+            const fd = new FormData();
+            fd.append('bot_id', botId);
+            fd.append('file', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() },
+                    body: fd
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    statusDiv.innerHTML = `<span style="color: #16a34a;">✅ Đã tạo phiên bản v${data.version_number} (${data.status})</span>`;
+                    setTimeout(() => {
+                        closeModal('updateVersionModal');
+                        loadMyBots();
+                    }, 1200);
+                } else {
+                    statusDiv.innerHTML = `<span style="color: #dc2626;">❌ Lỗi: ${escapeHtml(data.detail || 'Không thể upload')}</span>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Lỗi kết nối máy chủ</span>';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function viewHistory(botId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/${botId}`, { headers: authHeaders() });
+                if (!res.ok) throw new Error("Không thể tải lịch sử");
+                const bot = await res.json();
+
+                document.getElementById('historyTitle').innerText = `📜 Lịch Sử Phiên Bản: ${bot.name}`;
+                const container = document.getElementById('historyContent');
+
+                container.innerHTML = bot.versions.map(v => `
+                    <div style="border-bottom: 1px solid #e2e8f0; padding: 10px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong>Phiên bản v${v.version_number}</strong>
+                            <span class="badge ${v.status === 'READY' ? 'badge-active' : 'badge-finished'}">${v.status}</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">
+                            Thời gian: ${v.created_at ? new Date(v.created_at).toLocaleString('vi-VN') : 'N/A'}
+                        </div>
+                        ${v.validation_error ? `<div class="err-box">${escapeHtml(v.validation_error)}</div>` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('historyModal').style.display = 'flex';
+            } catch (err) {
+                alert("Lỗi: " + err.message);
+            }
+        }
+
+        async function revalidateBot(botId) {
+            if (!confirm("Chạy kiểm tra lại phiên bản hiện tại của bot trong Sandbox?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/${botId}/revalidate`, {
+                    method: 'POST',
+                    headers: authHeaders()
+                });
+                if (res.ok) {
+                    alert("Đã hoàn thành kiểm tra!");
+                    loadMyBots();
+                } else {
+                    const data = await res.json();
+                    alert("Lỗi: " + (data.detail || "Không thể kiểm tra"));
+                }
+            } catch (err) {
+                alert("Lỗi kết nối");
+            }
+        }
+
+        async function disableBot(botId) {
+            if (!confirm("Bạn có chắc chắn muốn vô hiệu hóa bot này?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/bots/${botId}`, {
+                    method: 'DELETE',
+                    headers: authHeaders()
+                });
+                if (res.ok) {
+                    alert("Đã vô hiệu hóa bot thành công!");
+                    loadMyBots();
+                }
+            } catch (err) {
+                alert("Lỗi kết nối");
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMyBots);
+    </script>
+</body>
+</html>

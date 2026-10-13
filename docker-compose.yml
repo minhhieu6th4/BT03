@@ -1,0 +1,13 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: uet_battle_db
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: uet_algorithm_battle
+    ports:
+      - "3307:3306"
+    volumes:
+      # Tự động chạy file schema.sql khi khởi tạo database lần đầu
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+    restart: unless-stopped

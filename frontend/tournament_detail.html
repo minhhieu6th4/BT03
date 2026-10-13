@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cây Thi Đấu Knockout - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .bracket-container {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            padding: 20px 10px;
+            min-height: 400px;
+        }
+        .bracket-round {
+            min-width: 290px;
+            display: flex;
+            flex-direction: column;
+        }
+        .round-header {
+            text-align: center;
+            font-weight: 700;
+            padding: 10px;
+            background: #1e293b;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 12px;
+        }
+        .bracket-matches {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            flex-grow: 1;
+            gap: 16px;
+        }
+        .match-card {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+            position: relative;
+        }
+        .match-card.ready {
+            border: 2px solid #3b82f6;
+            background: #eff6ff;
+        }
+        .match-card.playing {
+            border: 2px solid #f59e0b;
+            background: #fffbeb;
+        }
+        .match-card.completed {
+            border-color: #cbd5e1;
+        }
+        .match-card.forfeit {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        .player-slot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin: 4px 0;
+            border-radius: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        .player-slot.winner {
+            background: #dcfce7;
+            border-color: #86efac;
+            font-weight: 700;
+            color: #166534;
+        }
+        .player-slot.forfeited {
+            color: #94a3b8;
+            text-decoration: line-through;
+        }
+        .match-timer {
+            font-size: 0.8rem;
+            color: #dc2626;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .badge-bye {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        .nav-tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .nav-tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        /* Chessboard Arena Layout in Modal */
+        .board-with-coords {
+            display: inline-block;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+        }
+        .board-col-headers {
+            display: flex;
+            margin-left: 26px;
+        }
+        .board-col-header {
+            width: 45px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #64748b;
+        }
+        .board-row-container {
+            display: flex;
+            align-items: center;
+        }
+        .board-row-header {
+            width: 26px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #64748b;
+        }
+        .piece-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            margin-left: 4px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border: 1px solid #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">⚔️ UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rules.html">📖 Luật Chơi</a>
+            <a href="rooms.html">⚔️ Thi Đấu Thường</a>
+            <a href="tournaments.html" class="active">🏆 Giải Đấu Knockout</a>
+            <a href="ranking.html">📊 Bảng Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none;">👤 Hồ Sơ</a>
+            <a href="submit.html">🤖 Bot Của Tôi</a>
+            <span id="navUserInfo" style="display:none;"></span>
+            <a href="login.html" id="navLoginBtn" class="btn btn-primary" style="padding: 4px 10px; color: white;">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none;" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+
+    <main style="max-width: 1300px;">
+        <!-- Header thông tin giải đấu -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <a href="tournaments.html" style="color: #64748b; text-decoration: none; font-size: 0.9rem;">← Quay lại danh sách giải đấu</a>
+                <h2 style="margin: 6px 0 0 0;" id="tournTitle">Giải Đấu Knockout</h2>
+                <p id="tournDesc" style="margin: 4px 0 0 0; color: #64748b; font-size: 0.95rem;">Đang tải thông tin giải...</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;" id="actionButtonsContainer">
+                <span id="tournStatusBadge" class="badge badge-waiting" style="font-size: 1rem; padding: 6px 16px;">Đang tải...</span>
+                <!-- Nút cho tuyển thủ -->
+                <button id="btnOpenRegister" class="btn btn-primary" style="display:none;" onclick="openRegisterModal()">✍️ Đăng Ký Tham Gia</button>
+                <button id="btnUnregister" class="btn btn-secondary" style="display:none;" onclick="unregisterMe()">Hủy Đăng Ký</button>
+                <!-- Nút cho người tổ chức -->
+                <button id="btnStartTourn" class="btn btn-success" style="display:none;" onclick="startTournament()">🚀 Bắt Đầu Giải Đấu</button>
+            </div>
+        </div>
+
+        <!-- Banner Nhà Vô Địch -->
+        <div id="championBanner" class="hero-banner" style="display:none; background: linear-gradient(135deg, #15803d 0%, #22c55e 100%); margin-bottom: 24px; text-align: center; padding: 24px; border-radius: 12px; color: white;">
+            <h2 style="font-size: 2.2rem; margin: 0 0 6px 0;">🏆 NHÀ VÔ ĐỊCH GIẢI ĐẤU 🏆</h2>
+            <p style="font-size: 1.5rem; font-weight: bold; margin: 0;" id="championName">Tuyển Thủ</p>
+        </div>
+
+        <!-- Tab Điều Hướng -->
+        <div class="nav-tabs">
+            <button class="nav-tab-btn active" id="tabBracketBtn" onclick="switchTab('bracket')">🌲 Cây Thi Đấu (Bracket)</button>
+            <button class="nav-tab-btn" id="tabParticipantsBtn" onclick="switchTab('participants')">👥 Danh Sách Tuyển Thủ (<span id="tabCount">0</span>)</button>
+            <button class="nav-tab-btn" id="tabOrganizerBtn" style="display:none;" onclick="switchTab('organizer')">📋 Quản Lý Đăng Ký (Dành Cho Chủ Giải)</button>
+        </div>
+
+        <!-- TAB 1: Cây Thi Đấu Knockout -->
+        <div id="bracketSection">
+            <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <p style="color: #64748b; font-size: 0.9rem; margin: 0;">
+                    Nhánh đấu tự động cập nhật kết quả. Các trận <span class="badge badge-playing">READY</span> có hạn chót <strong>10 phút</strong> để cả 2 tuyển thủ điểm danh tham gia.
+                </p>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="loadTournament()">🔄 Cập nhật nhánh đấu</button>
+            </div>
+            <div class="bracket-container" id="bracketContainer">
+                <div style="text-align: center; width: 100%; color: #94a3b8; padding: 60px;">
+                    Cây thi đấu sẽ hiển thị tại đây ngay khi người tổ chức bắt đầu giải đấu!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Danh Sách Tuyển Thủ -->
+        <div id="participantsSection" style="display:none;">
+            <div class="card" style="background: #f8fafc;">
+                <h3>Danh Sách Tuyển Thủ</h3>
+                <div class="table-container" style="margin-top: 15px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hạt Giống</th>
+                                <th>Tuyển Thủ</th>
+                                <th>Bot Thi Đấu</th>
+                                <th>Trạng Thái</th>
+                                <th>Thời Gian Đăng Ký</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participantsTableBody">
+                            <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Chưa có tuyển thủ nào.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Quản Lý Đăng Ký (Dành cho Chủ Giải) -->
+        <div id="organizerSection" style="display:none;">
+            <div class="card" style="border-left: 4px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="margin: 0;">📋 Phê Duyệt Tuyển Thủ Đăng Ký</h3>
+                        <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                            Chỉ tuyển thủ có trạng thái <strong>ACCEPTED</strong> mới được tham gia cây thi đấu khi giải bắt đầu.
+                        </p>
+                    </div>
+                    <div style="font-size: 0.95rem;">
+                        Đã duyệt: <strong id="orgAcceptedCount" style="color: #16a34a;">0</strong> / <span id="orgMaxCount">16</span> tuyển thủ (Tối thiểu: <span id="orgMinCount">4</span>)
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên Tuyển Thủ</th>
+                                <th>Bot Python</th>
+                                <th>Thời Gian Gửi</th>
+                                <th>Trạng Thái</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTableBody">
+                            <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Đang tải danh sách yêu cầu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Đăng Ký Tham Gia & Chọn Bot -->
+        <div id="registerModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 480px;">
+                <h3>Đăng Ký Tham Gia Giải Đấu</h3>
+                <p style="color: #64748b; font-size: 0.9rem;">Chọn Bot Python hợp lệ của bạn để thi đấu trong giải Knockout này.</p>
+                <div style="margin: 16px 0;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Chọn Bot thi đấu:</label>
+                    <select id="botSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">Đang tải danh sách Bot...</option>
+                    </select>
+                    <small style="color: #64748b; display: block; margin-top: 6px;">Nếu chưa có Bot, bạn có thể nạp Bot tại mục <a href="submit.html" target="_blank">Bot Của Tôi</a>.</small>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                    <button class="btn btn-secondary" onclick="closeRegisterModal()">Hủy</button>
+                    <button class="btn btn-success" onclick="submitRegistration()">Gửi Yêu Cầu Đăng Ký</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- MODAL ĐẤU TRƯỜNG TRỰC QUAN: BÀN CỜ 9X9 VÀ QUÂN CỜ DI CHUYỂN   -->
+        <!-- Chỉ công bố người thắng cuộc khi trận đấu thực sự kết thúc     -->
+        <!-- ============================================================== -->
+        <div id="battleArenaModal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 980px; width: 95%; max-height: 94vh; overflow-y: auto; padding: 20px;">
+                <!-- Tiêu đề trận đấu -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h3 id="arenaTitle" style="margin: 0; color: #0f172a;">⚔️ Trận Đấu Knockout Trực Quan</h3>
+                        <p id="arenaSubtitle" style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">Bàn cờ tự động mô phỏng các nước cờ của 2 Bot.</p>
+                    </div>
+                    <button class="btn btn-secondary" style="padding: 4px 10px;" onclick="closeVisualArena()">✖ Đóng</button>
+                </div>
+
+                <!-- Banner thông báo: Đang thi đấu (ẨN KẾT QUẢ) -->
+                <div id="arenaLiveStatusBox" style="background: #eff6ff; border: 1px solid #93c5fd; border-left: 5px solid #3b82f6; padding: 12px 18px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span class="badge badge-playing" style="font-size: 0.85rem;">⚔️ TRẬN ĐẤU ĐANG DIỄN RA</span>
+                            <span id="arenaLiveTurnDesc" style="margin-left: 8px; font-weight: 600; color: #1e3a8a;">Bàn cờ ban đầu (Lượt 0)...</span>
+                        </div>
+                        <span id="arenaMoveCounter" style="font-size: 0.85rem; color: #64748b; font-weight: bold;">Lượt: 0 / 0</span>
+                    </div>
+                </div>
+
+                <!-- Banner công bố người chiến thắng: CHỈ HIỆN KHI KẾT THÚC TRẬN -->
+                <div id="arenaVerdictBox" style="display: none; background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 6px solid #10b981; padding: 16px 20px; border-radius: 8px; margin-bottom: 16px; animation: fadeIn 0.4s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span class="badge badge-ready" style="font-size: 0.9rem; padding: 4px 12px;">🏆 KẾT THÚC TRẬN ĐẤU</span>
+                            <h3 style="margin: 6px 0 2px 0; color: #166534;" id="arenaVerdictWinner">🎉 Người chiến thắng: Tuyển Thủ A</h3>
+                            <p style="margin: 0; color: #15803d; font-size: 0.9rem;" id="arenaVerdictReason">Lý do: Bot đạt mục tiêu đích đến.</p>
+                        </div>
+                        <button class="btn btn-success" onclick="closeVisualArena()" style="padding: 8px 18px;">✓ Hoàn Tất & Cập Nhật Cây Đấu</button>
+                    </div>
+                </div>
+
+                <!-- Bố cục Đấu Trường: Bàn cờ bên trái, Lịch sử nước cờ bên phải -->
+                <div class="battle-arena-layout">
+                    <!-- Cột trái: Bàn cờ & Bộ đếm quân & Điều khiển -->
+                    <div>
+                        <!-- Bộ đếm quân 2 phe -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 0.85rem;">
+                            <div>
+                                <strong style="color: #ef4444;" id="arenaRedLabel">🔴 ĐỎ:</strong>
+                                <span class="piece-badge" id="arenaRedRock">🪨 3</span>
+                                <span class="piece-badge" id="arenaRedPaper">📄 3</span>
+                                <span class="piece-badge" id="arenaRedScissors">✂️ 3</span>
+                            </div>
+                            <div>
+                                <strong style="color: #3b82f6;" id="arenaBlueLabel">🔵 XANH:</strong>
+                                <span class="piece-badge" id="arenaBlueRock">🪨 3</span>
+                                <span class="piece-badge" id="arenaBluePaper">📄 3</span>
+                                <span class="piece-badge" id="arenaBlueScissors">✂️ 3</span>
+                            </div>
+                        </div>
+
+                        <!-- Bàn cờ 9x9 trực quan -->
+                        <div style="text-align: center;">
+                            <div class="board-with-coords">
+                                <!-- Chỉ số cột 0-8 -->
+                                <div class="board-col-headers">
+                                    <div class="board-col-header">0</div><div class="board-col-header">1</div><div class="board-col-header">2</div>
+                                    <div class="board-col-header">3</div><div class="board-col-header">4</div><div class="board-col-header">5</div>
+                                    <div class="board-col-header">6</div><div class="board-col-header">7</div><div class="board-col-header">8</div>
+                                </div>
+                                <div id="arenaBoardContainer">
+                                    <!-- 9 hàng kèm chỉ số hàng sẽ được sinh qua JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Thanh điều khiển Playback -->
+                        <div class="playback-controls-bar">
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="arenaReset()">🔄 Về Đầu</button>
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="arenaPrev()">⏮ Lùi</button>
+                            <button id="arenaPlayBtn" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.9rem;" onclick="arenaTogglePlay()">⏸ Tạm Dừng</button>
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="arenaNext()">⏭ Tiếp</button>
+                            
+                            <select id="arenaSpeedSelect" class="form-select" style="width: auto; padding: 4px 8px; font-size: 0.85rem;" onchange="arenaChangeSpeed()">
+                                <option value="1200">Tốc độ: 0.5x (Chậm)</option>
+                                <option value="600" selected>Tốc độ: 1.0x (Chuẩn)</option>
+                                <option value="300">Tốc độ: 2.0x (Nhanh)</option>
+                                <option value="150">Tốc độ: 4.0x (Cực nhanh)</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <input type="range" id="arenaScrubber" min="0" max="0" value="0" style="width: 100%;" oninput="arenaSeek(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Nhật ký các nước đi -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: #334155; font-size: 0.9rem;">📜 Nhật Ký Nước Đi (Move Logs)</strong>
+                            <span id="arenaLogBadge" class="badge badge-waiting" style="font-size: 0.75rem;">0 nước đi</span>
+                        </div>
+                        <div class="move-log-container" id="arenaMoveList">
+                            <div style="text-align: center; color: #94a3b8; padding: 30px;">Đang tải danh sách nước đi...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/nav.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tournId = urlParams.get('id');
+
+        let currentDetail = null;
+        let currentUserId = null;
+        let myBots = [];
+        let timerInterval = null;
+
+        // Biến trạng thái cho Visual Arena Playback
+        let arenaMatchData = null;
+        let arenaInitialBoard = [];
+        let arenaMoves = [];
+        let arenaCurrentStep = 0;
+        let arenaPlayTimer = null;
+        let arenaSpeedMs = 600;
+        let arenaIsPlaying = false;
+
+        const pieceIcons = {
+            1: { char: '🪨', class: 'piece-red' },
+            2: { char: '📄', class: 'piece-red' },
+            3: { char: '✂️', class: 'piece-red' },
+            4: { char: '🪨', class: 'piece-blue' },
+            5: { char: '📄', class: 'piece-blue' },
+            6: { char: '✂️', class: 'piece-blue' }
+        };
+
+        function switchTab(tabName) {
+            document.getElementById('tabBracketBtn').className = 'nav-tab-btn ' + (tabName === 'bracket' ? 'active' : '');
+            document.getElementById('tabParticipantsBtn').className = 'nav-tab-btn ' + (tabName === 'participants' ? 'active' : '');
+            const orgBtn = document.getElementById('tabOrganizerBtn');
+            if (orgBtn) orgBtn.className = 'nav-tab-btn ' + (tabName === 'organizer' ? 'active' : '');
+
+            document.getElementById('bracketSection').style.display = (tabName === 'bracket') ? 'block' : 'none';
+            document.getElementById('participantsSection').style.display = (tabName === 'participants') ? 'block' : 'none';
+            document.getElementById('organizerSection').style.display = (tabName === 'organizer') ? 'block' : 'none';
+
+            if (tabName === 'organizer') {
+                loadRequests();
+            }
+        }
+
+        function loadTournament() {
+            if (!tournId) {
+                alert("Thiếu ID giải đấu!");
+                window.location.href = "tournaments.html";
+                return;
+            }
+
+            fetch(`${API_BASE}/api/tournaments/${tournId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Không thể tải thông tin giải đấu");
+                    return res.json();
+                })
+                .then(detail => {
+                    currentDetail = detail;
+                    renderDetail();
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+        }
+
+        function renderDetail() {
+            if (!currentDetail) return;
+            const t = currentDetail.tournament;
+
+            document.getElementById('tournTitle').innerText = t.name;
+            document.getElementById('tournDesc').innerText = (t.description || "Không có mô tả") + 
+                ` • Tổ chức bởi: ${t.creator_name || 'Admin'} • Quy mô: tối thiểu ${t.min_participants}, tối đa ${t.max_participants}`;
+
+            const badge = document.getElementById('tournStatusBadge');
+            let badgeClass = 'badge-waiting';
+            let badgeText = t.status;
+            if (t.status === 'IN_PROGRESS') {
+                badgeClass = 'badge-playing';
+                badgeText = 'Đang Thi Đấu';
+            } else if (t.status === 'COMPLETED') {
+                badgeClass = 'badge-ready';
+                badgeText = 'Đã Hoàn Tất';
+            } else if (t.status === 'REGISTRATION_OPEN' || t.status === 'REGISTRATION') {
+                badgeClass = 'badge-waiting';
+                badgeText = 'Đang Mở Đăng Ký';
+            }
+            badge.innerText = badgeText;
+            badge.className = 'badge ' + badgeClass;
+
+            // Champion banner
+            const champBanner = document.getElementById('championBanner');
+            if (t.status === 'COMPLETED' && t.champion_name) {
+                champBanner.style.display = 'block';
+                document.getElementById('championName').innerText = `🎉 ${t.champion_name} 🎉`;
+            } else {
+                champBanner.style.display = 'none';
+            }
+
+            // Participants Table
+            const participants = currentDetail.participants || [];
+            document.getElementById('tabCount').innerText = participants.length;
+            const pTbody = document.getElementById('participantsTableBody');
+            if (participants.length > 0) {
+                pTbody.innerHTML = participants.map(p => `
+                    <tr>
+                        <td><strong>#${p.seed}</strong></td>
+                        <td><strong>${p.username}</strong> ${p.user_id === currentUserId ? '<span class="badge badge-ready" style="font-size: 0.75rem;">Bạn</span>' : ''}</td>
+                        <td>${p.bot_name ? '🤖 ' + p.bot_name : '<span style="color:#94a3b8;">Mặc định</span>'}</td>
+                        <td>
+                            <span class="badge ${p.status === 'ACCEPTED' ? 'badge-ready' : (p.status === 'REJECTED' ? 'badge-forfeit' : 'badge-waiting')}">
+                                ${p.status}
+                            </span>
+                        </td>
+                        <td>${p.registered_at ? new Date(p.registered_at).toLocaleString('vi-VN') : '-'}</td>
+                    </tr>
+                `).join('');
+            } else {
+                pTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Chưa có tuyển thủ nào đăng ký.</td></tr>';
+            }
+
+            // Buttons state
+            const btnOpenReg = document.getElementById('btnOpenRegister');
+            const btnUnreg = document.getElementById('btnUnregister');
+            const btnStart = document.getElementById('btnStartTourn');
+            const tabOrg = document.getElementById('tabOrganizerBtn');
+
+            const isCreator = (currentUserId && currentUserId === t.creator_id);
+            const myParticipant = participants.find(p => p.user_id === currentUserId);
+
+            if (isCreator) {
+                tabOrg.style.display = 'inline-block';
+                document.getElementById('orgMinCount').innerText = t.min_participants;
+                document.getElementById('orgMaxCount').innerText = t.max_participants;
+                document.getElementById('orgAcceptedCount').innerText = t.accepted_count || 0;
+            } else {
+                tabOrg.style.display = 'none';
+            }
+
+            if (t.status === 'REGISTRATION_OPEN' || t.status === 'REGISTRATION') {
+                if (myParticipant) {
+                    btnOpenReg.style.display = 'none';
+                    if (myParticipant.status === 'PENDING' || myParticipant.status === 'ACCEPTED') {
+                        btnUnreg.style.display = 'inline-flex';
+                    } else {
+                        btnUnreg.style.display = 'none';
+                        btnOpenReg.style.display = 'inline-flex';
+                        btnOpenReg.innerText = '✍️ Đăng Ký Lại';
+                    }
+                } else {
+                    btnOpenReg.style.display = 'inline-flex';
+                    btnOpenReg.innerText = '✍️ Đăng Ký Tham Gia';
+                    btnUnreg.style.display = 'none';
+                }
+
+                if (isCreator) {
+                    btnStart.style.display = 'inline-flex';
+                    const accCount = t.accepted_count || 0;
+                    if (accCount >= t.min_participants) {
+                        btnStart.className = 'btn btn-success';
+                        btnStart.innerText = `🚀 Bắt Đầu Giải (${accCount} người đã duyệt)`;
+                        btnStart.disabled = false;
+                    } else {
+                        btnStart.className = 'btn btn-secondary';
+                        btnStart.innerText = `🚀 Bắt Đầu Giải (Cần duyệt ≥ ${t.min_participants}, hiện có ${accCount})`;
+                        btnStart.disabled = false;
+                    }
+                } else {
+                    btnStart.style.display = 'none';
+                }
+            } else {
+                btnOpenReg.style.display = 'none';
+                btnUnreg.style.display = 'none';
+                btnStart.style.display = 'none';
+            }
+
+            // Render Bracket
+            renderBracket();
+        }
+
+        function renderBracket() {
+            const container = document.getElementById('bracketContainer');
+            if (!currentDetail.rounds || currentDetail.rounds.length === 0) {
+                container.innerHTML = '<div style="text-align: center; width: 100%; color: #94a3b8; padding: 60px;">Cây thi đấu sẽ hiển thị tại đây ngay khi người tổ chức bắt đầu giải đấu!</div>';
+                return;
+            }
+
+            container.innerHTML = currentDetail.rounds.map(round => `
+                <div class="bracket-round">
+                    <div class="round-header">${round.round_name}</div>
+                    <div class="bracket-matches">
+                        ${round.matches.map(m => {
+                            const isP1 = (currentUserId && m.player1_id === currentUserId);
+                            const isP2 = (currentUserId && m.player2_id === currentUserId);
+                            const isMyMatch = isP1 || isP2;
+
+                            const p1Joined = (m.player1_joined_at != null);
+                            const p2Joined = (m.player2_joined_at != null);
+
+                            let cardClass = 'match-card';
+                            if (m.status === 'READY') cardClass += ' ready';
+                            else if (m.status === 'PLAYING') cardClass += ' playing';
+                            else if (m.status === 'COMPLETED') cardClass += ' completed';
+                            else if (m.status === 'FORFEIT') cardClass += ' forfeit';
+
+                            let statusBadge = `<span class="badge badge-waiting">${m.status}</span>`;
+                            if (m.is_bye) statusBadge = `<span class="badge-bye">ĐẶC CÁCH BYE</span>`;
+                            else if (m.status === 'READY') statusBadge = `<span class="badge badge-playing">SẴN SÀNG</span>`;
+                            else if (m.status === 'PLAYING') statusBadge = `<span class="badge badge-playing">ĐANG THI ĐẤU</span>`;
+                            else if (m.status === 'COMPLETED') statusBadge = `<span class="badge badge-ready">XONG</span>`;
+                            else if (m.status === 'FORFEIT') statusBadge = `<span class="badge badge-forfeit">XỬ THUA</span>`;
+
+                            const canJoin = (m.status === 'READY' && isMyMatch && ((isP1 && !p1Joined) || (isP2 && !p2Joined)));
+                            const hasJoined = (m.status === 'READY' && isMyMatch && ((isP1 && p1Joined) || (isP2 && p2Joined)));
+
+                            return `
+                                <div class="${cardClass}" id="match-card-${m.id}">
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>Trận #${m.match_order + 1}</span>
+                                        ${statusBadge}
+                                    </div>
+
+                                    <!-- Slot Player 1 -->
+                                    <div class="player-slot ${m.winner_id && m.winner_id === m.player1_id ? 'winner' : ''} ${m.status === 'FORFEIT' && !p1Joined ? 'forfeited' : ''}">
+                                        <span>
+                                            ${m.player1_name || (m.player1_id ? 'Tuyển thủ #' + m.player1_id : '<em>Chờ kết quả</em>')}
+                                            ${m.player1_bot_name ? `<small style="color: #64748b;">(🤖 ${m.player1_bot_name})</small>` : ''}
+                                            ${p1Joined ? ' <span style="color:#16a34a; font-size:0.75rem;">✓ đã điểm danh</span>' : ''}
+                                        </span>
+                                        ${m.winner_id && m.winner_id === m.player1_id ? '<span>🏆</span>' : ''}
+                                    </div>
+
+                                    <!-- Slot Player 2 -->
+                                    <div class="player-slot ${m.winner_id && m.winner_id === m.player2_id ? 'winner' : ''} ${m.status === 'FORFEIT' && !p2Joined ? 'forfeited' : ''}">
+                                        <span>
+                                            ${m.is_bye ? '<em>(Suất đặc cách - Không có đối thủ)</em>' : (m.player2_name || (m.player2_id ? 'Tuyển thủ #' + m.player2_id : '<em>Chờ kết quả</em>'))}
+                                            ${m.player2_bot_name ? `<small style="color: #64748b;">(🤖 ${m.player2_bot_name})</small>` : ''}
+                                            ${p2Joined ? ' <span style="color:#16a34a; font-size:0.75rem;">✓ đã điểm danh</span>' : ''}
+                                        </span>
+                                        ${m.winner_id && m.winner_id === m.player2_id ? '<span>🏆</span>' : ''}
+                                    </div>
+
+                                    ${m.result_reason ? `
+                                        <div style="font-size: 0.75rem; color: #475569; margin-top: 4px; font-style: italic;">
+                                            Lý do: ${m.result_reason}
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Thời gian đếm ngược 10 phút -->
+                                    ${m.status === 'READY' && m.participation_deadline ? `
+                                        <div class="match-timer" id="timer-${m.id}" data-deadline="${m.participation_deadline}">
+                                            ⏱️ Hạn chót điểm danh: <span class="countdown-val">Đang tính...</span>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Nút tham gia điểm danh cho tuyển thủ -->
+                                    ${canJoin ? `
+                                        <div style="margin-top: 8px;">
+                                            <button class="btn btn-primary" style="width: 100%; padding: 6px; font-size: 0.85rem;" onclick="joinMatch(${m.id})">
+                                                ⚔️ Tham Gia Thi Đấu (Điểm Danh)
+                                            </button>
+                                        </div>
+                                    ` : ''}
+
+                                    ${hasJoined ? `
+                                        <div style="margin-top: 8px; font-size: 0.8rem; color: #16a34a; font-weight: 600; text-align: center;">
+                                            ✅ Bạn đã điểm danh! Chờ đối thủ tham gia...
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Nút xem trực quan bàn cờ khi trận đang thi đấu hoặc đã hoàn thành có Match ID -->
+                                    ${m.match_id ? `
+                                        <div style="margin-top: 8px;">
+                                            <button class="btn btn-primary" style="width: 100%; padding: 5px; font-size: 0.8rem; background: #2563eb;" onclick="openVisualArena(${m.id}, ${m.match_id})">
+                                                🎬 Xem Bàn Cờ Trực Quan
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            startCountdowns();
+        }
+
+        function startCountdowns() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            function update() {
+                const now = new Date().getTime();
+                document.querySelectorAll('.match-timer').forEach(el => {
+                    const deadlineStr = el.getAttribute('data-deadline');
+                    if (!deadlineStr) return;
+                    const deadline = new Date(deadlineStr + (deadlineStr.endsWith('Z') ? '' : 'Z')).getTime();
+                    const diff = Math.floor((deadline - now) / 1000);
+                    const span = el.querySelector('.countdown-val');
+                    if (diff <= 0) {
+                        span.innerText = "Hết hạn (Đang xử lý...)";
+                        span.style.color = "#dc2626";
+                    } else {
+                        const mins = Math.floor(diff / 60);
+                        const secs = diff % 60;
+                        span.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} còn lại`;
+                    }
+                });
+            }
+
+            update();
+            timerInterval = setInterval(update, 1000);
+        }
+
+        function joinMatch(matchId) {
+            fetch(`${API_BASE}/api/tournaments/${tournId}/matches/${matchId}/join`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi điểm danh tham gia"); });
+                return res.json();
+            })
+            .then(matchData => {
+                loadTournament();
+                if (matchData.match_id) {
+                    // Cả hai tuyển thủ đã điểm danh -> Bật ngay Bàn cờ trực quan cho trận đấu!
+                    openVisualArena(matchData.id, matchData.match_id);
+                } else {
+                    alert("Điểm danh thành công! Trận đấu sẽ tự động bắt đầu ngay khi đối thủ tham gia.");
+                }
+            })
+            .catch(err => alert(err.message));
+        }
+
+        // ==============================================================
+        // LOGIC BÀN CỜ TRỰC QUAN & CHỈ CÔNG BỐ KẾT QUẢ KHI KẾT THÚC
+        // ==============================================================
+        function initArenaBoardGrid() {
+            const container = document.getElementById('arenaBoardContainer');
+            container.innerHTML = '';
+
+            for (let r = 0; r < 9; r++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'board-row-container';
+
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'board-row-header';
+                rowHeader.innerText = r;
+                rowDiv.appendChild(rowHeader);
+
+                for (let c = 0; c < 9; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `acell-${r}-${c}`;
+                    if (r === 0 && c === 0) cell.classList.add('red-dest');
+                    if (r === 8 && c === 8) cell.classList.add('blue-dest');
+                    rowDiv.appendChild(cell);
+                }
+                container.appendChild(rowDiv);
+            }
+        }
+
+        function openVisualArena(tournMatchId, matchId) {
+            fetch(`${API_BASE}/api/matches/${matchId}/replay`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Không thể tải dữ liệu trận đấu");
+                    return res.json();
+                })
+                .then(data => {
+                    arenaMatchData = data;
+                    arenaInitialBoard = data.initial_board || [];
+                    arenaMoves = data.moves || [];
+                    arenaCurrentStep = 0;
+
+                    // Cập nhật tiêu đề và tên 2 phe
+                    document.getElementById('arenaTitle').innerText = `⚔️ Trận Đấu #${tournMatchId}: ${data.red_team} (ĐỎ) VS ${data.blue_team} (XANH)`;
+                    document.getElementById('arenaSubtitle').innerText = `Bot Đỏ: ${data.red_bot} • Bot Xanh: ${data.blue_bot}`;
+                    document.getElementById('arenaRedLabel').innerText = `🔴 ${data.red_team}:`;
+                    document.getElementById('arenaBlueLabel').innerText = `🔵 ${data.blue_team}:`;
+
+                    // ẨN KẾT QUẢ KHI TRẬN ĐẤU ĐANG DIỄN RA!
+                    document.getElementById('arenaVerdictBox').style.display = 'none';
+                    document.getElementById('arenaLiveStatusBox').style.display = 'block';
+
+                    // Khởi tạo lưới bàn cờ và danh sách lượt đi
+                    initArenaBoardGrid();
+                    renderArenaMoveList();
+
+                    // Cài đặt thanh trượt lượt đi
+                    const scrubber = document.getElementById('arenaScrubber');
+                    scrubber.max = arenaMoves.length;
+                    scrubber.value = 0;
+                    document.getElementById('arenaMoveCounter').innerText = `Lượt: 0 / ${arenaMoves.length}`;
+                    document.getElementById('arenaLogBadge').innerText = `${arenaMoves.length} nước đi`;
+
+                    // Hiển thị modal
+                    document.getElementById('battleArenaModal').style.display = 'flex';
+
+                    // Vẽ trạng thái ban đầu và tự động phát trận đấu
+                    arenaGoToStep(0);
+                    arenaStartAutoPlay();
+                })
+                .catch(err => {
+                    alert("Lỗi tải trận đấu: " + err.message);
+                });
+        }
+
+        function closeVisualArena() {
+            arenaPauseAutoPlay();
+            document.getElementById('battleArenaModal').style.display = 'none';
+            // Tải lại nhánh đấu để cập nhật người thắng lên vòng sau
+            loadTournament();
+        }
+
+        function renderArenaBoardState(matrix, lastMove = null) {
+            if (!matrix || matrix.length !== 9) return;
+
+            let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const val = matrix[r][c];
+                    const cell = document.getElementById(`acell-${r}-${c}`);
+                    if (!cell) continue;
+
+                    cell.className = 'cell';
+                    if (r === 0 && c === 0) cell.classList.add('red-dest');
+                    if (r === 8 && c === 8) cell.classList.add('blue-dest');
+
+                    if (val === 0) {
+                        cell.innerHTML = '';
+                    } else {
+                        const p = pieceIcons[val];
+                        cell.innerHTML = `<span class="${p.class}" style="font-size: 26px;">${p.char}</span>`;
+                        counts[val] = (counts[val] || 0) + 1;
+                    }
+                }
+            }
+
+            // Cập nhật số quân còn lại
+            document.getElementById('arenaRedRock').innerText = `🪨 ${counts[1] || 0}`;
+            document.getElementById('arenaRedPaper').innerText = `📄 ${counts[2] || 0}`;
+            document.getElementById('arenaRedScissors').innerText = `✂️ ${counts[3] || 0}`;
+            document.getElementById('arenaBlueRock').innerText = `🪨 ${counts[4] || 0}`;
+            document.getElementById('arenaBluePaper').innerText = `📄 ${counts[5] || 0}`;
+            document.getElementById('arenaBlueScissors').innerText = `✂️ ${counts[6] || 0}`;
+
+            // Highlight nước đi vừa qua
+            if (lastMove) {
+                const fromCell = document.getElementById(`acell-${lastMove.from[0]}-${lastMove.from[1]}`);
+                const toCell = document.getElementById(`acell-${lastMove.to[0]}-${lastMove.to[1]}`);
+                if (fromCell) fromCell.classList.add('last-from');
+                if (toCell) toCell.classList.add('last-to');
+            }
+        }
+
+        function arenaGoToStep(step) {
+            step = Math.max(0, Math.min(step, arenaMoves.length));
+            arenaCurrentStep = step;
+
+            const scrubber = document.getElementById('arenaScrubber');
+            scrubber.value = step;
+            document.getElementById('arenaMoveCounter').innerText = `Lượt: ${step} / ${arenaMoves.length}`;
+
+            // Highlight trong Move Log
+            const allItems = document.querySelectorAll('.arena-log-item');
+            allItems.forEach(el => el.classList.remove('active'));
+            if (step > 0) {
+                const activeItem = document.getElementById(`alog-item-${step}`);
+                const logContainer = document.getElementById('arenaMoveList');
+                if (activeItem && logContainer) {
+                    activeItem.classList.add('active');
+                    const containerRect = logContainer.getBoundingClientRect();
+                    const itemRect = activeItem.getBoundingClientRect();
+                    const currentScroll = logContainer.scrollTop;
+                    const relativeTop = itemRect.top - containerRect.top + currentScroll;
+                    const targetScroll = relativeTop - (logContainer.clientHeight / 2) + (activeItem.clientHeight / 2);
+                    logContainer.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            // Vẽ bàn cờ
+            if (step === 0) {
+                renderArenaBoardState(arenaInitialBoard, null);
+                document.getElementById('arenaLiveTurnDesc').innerHTML = `🏁 Bàn cờ ban đầu — Trận đấu chuẩn bị bắt đầu.`;
+                document.getElementById('arenaVerdictBox').style.display = 'none';
+                document.getElementById('arenaLiveStatusBox').style.display = 'block';
+            } else {
+                const move = arenaMoves[step - 1];
+                renderArenaBoardState(move.board_after, move);
+                const teamColor = move.team === 'RED' ? '#ef4444' : '#3b82f6';
+                const teamName = move.team === 'RED' ? arenaMatchData.red_team : arenaMatchData.blue_team;
+                document.getElementById('arenaLiveTurnDesc').innerHTML = `
+                    <span style="color: ${teamColor}; font-weight: bold;">Lượt ${move.turn} (${teamName}):</span>
+                    Di chuyển từ <strong>(${move.from[0]}, ${move.from[1]})</strong> ➔ <strong>(${move.to[0]}, ${move.to[1]})</strong>
+                `;
+            }
+
+            // ==============================================================
+            // CHỈ CÔNG BỐ NGƯỜI CHIẾN THẮNG KHI TRẬN ĐẤU HOÀN TOÀN KẾT THÚC!
+            // ==============================================================
+            if (step === arenaMoves.length && arenaMatchData) {
+                arenaPauseAutoPlay();
+                // Ẩn thanh trạng thái đang thi đấu, Hiện Banner Chiến Thắng
+                document.getElementById('arenaLiveStatusBox').style.display = 'none';
+                const verdictBox = document.getElementById('arenaVerdictBox');
+                verdictBox.style.display = 'block';
+
+                let winnerName = "Chưa xác định";
+                if (arenaMatchData.winner_user_id) {
+                    if (arenaMatchData.winner_user_id === arenaMatchData.red_user_id || arenaMatchData.winner_user_id === 1) {
+                        winnerName = `${arenaMatchData.red_team} (ĐỎ)`;
+                    } else {
+                        winnerName = `${arenaMatchData.blue_team} (XANH)`;
+                    }
+                } else {
+                    winnerName = arenaMatchData.red_team; // Fallback
+                }
+
+                document.getElementById('arenaVerdictWinner').innerText = `🎉 NGƯỜI CHIẾN THẮNG: ${winnerName}`;
+                document.getElementById('arenaVerdictReason').innerText = `Lý do: ${arenaMatchData.reason || 'Trận đấu kết thúc bình thường'}`;
+            }
+        }
+
+        function renderArenaMoveList() {
+            const container = document.getElementById('arenaMoveList');
+            if (!arenaMoves || arenaMoves.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 30px;">Không có nước đi nào.</div>';
+                return;
+            }
+
+            container.innerHTML = arenaMoves.map((m, idx) => {
+                const stepNum = idx + 1;
+                const isRed = m.team === 'RED';
+                const color = isRed ? '#ef4444' : '#3b82f6';
+                const playerName = isRed ? arenaMatchData.red_team : arenaMatchData.blue_team;
+
+                return `
+                    <div class="move-log-item arena-log-item" id="alog-item-${stepNum}" onclick="arenaGoToStep(${stepNum})">
+                        <div>
+                            <span style="font-weight: bold; color: ${color};">#${m.turn} [${m.team}]</span>
+                            <span style="color: #334155; margin-left: 6px;">${playerName}</span>
+                        </div>
+                        <div style="font-family: monospace; font-size: 0.85rem; color: #64748b;">
+                            (${m.from[0]},${m.from[1]}) ➔ (${m.to[0]},${m.to[1]})
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function arenaStartAutoPlay() {
+            arenaIsPlaying = true;
+            document.getElementById('arenaPlayBtn').innerText = '⏸ Tạm Dừng';
+            if (arenaPlayTimer) clearInterval(arenaPlayTimer);
+
+            arenaPlayTimer = setInterval(() => {
+                if (arenaCurrentStep < arenaMoves.length) {
+                    arenaGoToStep(arenaCurrentStep + 1);
+                } else {
+                    arenaPauseAutoPlay();
+                }
+            }, arenaSpeedMs);
+        }
+
+        function arenaPauseAutoPlay() {
+            arenaIsPlaying = false;
+            document.getElementById('arenaPlayBtn').innerText = '▶ Tiếp Tục';
+            if (arenaPlayTimer) {
+                clearInterval(arenaPlayTimer);
+                arenaPlayTimer = null;
+            }
+        }
+
+        function arenaTogglePlay() {
+            if (arenaIsPlaying) {
+                arenaPauseAutoPlay();
+            } else {
+                if (arenaCurrentStep >= arenaMoves.length) {
+                    arenaGoToStep(0);
+                }
+                arenaStartAutoPlay();
+            }
+        }
+
+        function arenaReset() {
+            arenaPauseAutoPlay();
+            arenaGoToStep(0);
+        }
+
+        function arenaNext() {
+            arenaPauseAutoPlay();
+            arenaGoToStep(arenaCurrentStep + 1);
+        }
+
+        function arenaPrev() {
+            arenaPauseAutoPlay();
+            arenaGoToStep(arenaCurrentStep - 1);
+        }
+
+        function arenaSeek(val) {
+            arenaPauseAutoPlay();
+            arenaGoToStep(parseInt(val));
+        }
+
+        function arenaChangeSpeed() {
+            arenaSpeedMs = parseInt(document.getElementById('arenaSpeedSelect').value) || 600;
+            if (arenaIsPlaying) {
+                arenaStartAutoPlay();
+            }
+        }
+
+        function loadRequests() {
+            fetch(`${API_BASE}/api/tournaments/${tournId}/requests`, {
+                headers: authHeaders()
+            })
+            .then(res => res.json())
+            .then(requests => {
+                const tbody = document.getElementById('requestsTableBody');
+                if (!requests || requests.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8;">Chưa có yêu cầu đăng ký nào.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = requests.map(r => `
+                    <tr>
+                        <td>#${r.id}</td>
+                        <td><strong>${r.username}</strong> (ID: ${r.user_id})</td>
+                        <td>${r.bot_name ? '🤖 ' + r.bot_name : '<span style="color: #94a3b8;">Mặc định</span>'}</td>
+                        <td>${r.registered_at ? new Date(r.registered_at).toLocaleString('vi-VN') : '-'}</td>
+                        <td>
+                            <span class="badge ${r.status === 'ACCEPTED' ? 'badge-ready' : (r.status === 'REJECTED' ? 'badge-forfeit' : 'badge-waiting')}">
+                                ${r.status}
+                            </span>
+                        </td>
+                        <td>
+                            ${r.status === 'PENDING' ? `
+                                <div style="display: flex; gap: 6px;">
+                                    <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.8rem;" onclick="respondRequest(${r.id}, 'ACCEPTED')">✓ Duyệt</button>
+                                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="respondRequest(${r.id}, 'REJECTED')">✕ Từ chối</button>
+                                </div>
+                            ` : `<span style="color: #64748b; font-size: 0.85rem;">Đã xử lý</span>`}
+                        </td>
+                    </tr>
+                `).join('');
+            })
+            .catch(err => {
+                document.getElementById('requestsTableBody').innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Lỗi tải danh sách yêu cầu!</td></tr>';
+            });
+        }
+
+        function respondRequest(reqId, action) {
+            fetch(`${API_BASE}/api/tournaments/${tournId}/requests/${reqId}/respond`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ action: action })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi xử lý yêu cầu"); });
+                return res.json();
+            })
+            .then(() => {
+                loadTournament();
+                loadRequests();
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function openRegisterModal() {
+            if (!getAuthToken()) {
+                alert("Vui lòng đăng nhập trước khi đăng ký tham gia!");
+                window.location.href = "login.html";
+                return;
+            }
+
+            // Tải danh sách Bot của tuyển thủ
+            fetch(`${API_BASE}/api/bots/`, { headers: authHeaders() })
+                .then(res => res.json())
+                .then(bots => {
+                    myBots = bots || [];
+                    const select = document.getElementById('botSelect');
+                    if (myBots.length === 0) {
+                        select.innerHTML = '<option value="">(Chưa có Bot - Sử dụng Bot mặc định hệ thống)</option>';
+                    } else {
+                        select.innerHTML = '<option value="">-- Sử dụng Bot mặc định hệ thống --</option>' + 
+                            myBots.map(b => `<option value="${b.id}">🤖 ${b.name} (${b.status})</option>`).join('');
+                    }
+                    document.getElementById('registerModal').style.display = 'flex';
+                })
+                .catch(() => {
+                    document.getElementById('botSelect').innerHTML = '<option value="">(Sử dụng Bot mặc định)</option>';
+                    document.getElementById('registerModal').style.display = 'flex';
+                });
+        }
+
+        function closeRegisterModal() {
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function submitRegistration() {
+            const botVal = document.getElementById('botSelect').value;
+            const botId = botVal ? parseInt(botVal) : null;
+
+            fetch(`${API_BASE}/api/tournaments/${tournId}/register`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ bot_id: botId })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi đăng ký"); });
+                return res.json();
+            })
+            .then(data => {
+                closeRegisterModal();
+                alert("Gửi yêu cầu đăng ký thành công! Vui lòng chờ người tổ chức phê duyệt.");
+                loadTournament();
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function unregisterMe() {
+            if (!confirm("Bạn có chắc chắn muốn hủy đăng ký tham gia giải đấu này?")) return;
+            fetch(`${API_BASE}/api/tournaments/${tournId}/unregister`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Lỗi hủy đăng ký"); });
+                return res.json();
+            })
+            .then(() => {
+                alert("Đã hủy đăng ký thành công.");
+                loadTournament();
+            })
+            .catch(err => alert(err.message));
+        }
+
+        function startTournament() {
+            if (!confirm("Bạn có chắc chắn muốn BẮT ĐẦU GIẢI ĐẤU? Khi bắt đầu, cổng đăng ký sẽ đóng lại và cây nhánh Knockout sẽ được sinh tự động.")) return;
+
+            fetch(`${API_BASE}/api/tournaments/${tournId}/start`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Không thể bắt đầu giải"); });
+                return res.json();
+            })
+            .then(detail => {
+                currentDetail = detail;
+                renderDetail();
+                alert("Giải đấu đã bắt đầu thành công! Cây thi đấu đã được kích hoạt.");
+            })
+            .catch(err => alert(err.message));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch(`${API_BASE}/api/users/me`, { headers: authHeaders() })
+                .then(res => res.json())
+                .then(user => {
+                    if (user && user.id) currentUserId = user.id;
+                    loadTournament();
+                })
+                .catch(() => loadTournament());
+        });
+    </script>
+</body>
+</html>

@@ -67,6 +67,9 @@ class TournamentMatchResponse(BaseModel):
     id: int
     round_id: int
     match_order: int
+    wave_number: int = 1
+    current_wave: int = 1
+    total_waves: int = 1
     player1_id: Optional[int] = None
     player1_name: Optional[str] = None
     player1_bot_id: Optional[int] = None
@@ -85,7 +88,7 @@ class TournamentMatchResponse(BaseModel):
     map_name: Optional[str] = None
     map_size: Optional[int] = None
     map_reveal_at: Optional[datetime] = None
-    is_map_revealed: bool = False
+    is_map_revealed: bool = True
     rocks: Optional[List[List[int]]] = None
     scheduled_at: Optional[datetime] = None
     check_in_opens_at: Optional[datetime] = None
@@ -105,12 +108,16 @@ class MatchConfigUpdateRequest(BaseModel):
     map_id: Optional[int] = None
     scheduled_at: Optional[datetime] = None
 
+class MatchBotSelectRequest(BaseModel):
+    bot_id: int
+
 class SetupOverviewMatch(BaseModel):
     match_id: int
     round_id: int
     round_number: int
     round_name: str
     match_order: int
+    wave_number: int = 1
     player1_id: Optional[int] = None
     player1_name: Optional[str] = None
     player2_id: Optional[int] = None
@@ -140,11 +147,13 @@ class TournamentRoundResponse(BaseModel):
     round_number: int
     round_name: str
     status: str
+    current_wave: int = 1
+    total_waves: int = 1
     map_id: Optional[int] = None
     map_name: Optional[str] = None
     map_size: Optional[int] = None
     map_announced_at: Optional[datetime] = None
-    is_map_announced: bool = False
+    is_map_announced: bool = True
     rocks: Optional[List[List[int]]] = None
     matches: List[TournamentMatchResponse] = []
 

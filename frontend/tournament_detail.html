@@ -252,6 +252,14 @@
             border: 2px solid #3b82f6;
             background: #eff6ff;
         }
+        .prev-cell.piece-red, .editor-cell.piece-red-cell {
+            background: #fef2f2;
+            border: 1.5px solid #f87171;
+        }
+        .prev-cell.piece-blue, .editor-cell.piece-blue-cell {
+            background: #eff6ff;
+            border: 1.5px solid #60a5fa;
+        }
     </style>
 </head>
 <body>
@@ -443,10 +451,10 @@
                         <div id="editorGridContainer" style="display: inline-block;">
                             <!-- Sinh bằng JS -->
                         </div>
-                        <div style="display: flex; justify-content: center; gap: 16px; font-size: 0.78rem; color: #64748b; margin-top: 10px;">
-                            <span>🔴 Căn cứ / Quân Đỏ</span>
-                            <span>🔵 Căn cứ / Quân Xanh</span>
-                            <span>🪨 Ô đá cản</span>
+                        <div style="display: flex; justify-content: center; gap: 14px; font-size: 0.78rem; color: #475569; margin-top: 10px; flex-wrap: wrap;">
+                            <span><strong style="color: #dc2626;">🔴 Phe Đỏ:</strong> 🚩 Căn cứ, 🪨 Búa, 📄 Bao, ✂️ Kéo</span>
+                            <span><strong style="color: #2563eb;">🔵 Phe Xanh:</strong> 🏁 Căn cứ, 🪨 Búa, 📄 Bao, ✂️ Kéo</span>
+                            <span><strong>🪨 Ô đá cản</strong></span>
                         </div>
                     </div>
 
@@ -459,43 +467,8 @@
                     </div>
                 </div>
 
-                <!-- Cột phải: Danh Sách Map Đã Tạo & Gán Map Cho Vòng Đấu -->
+                <!-- Cột phải: Thư Viện Map Đã Lưu -->
                 <div>
-                    <!-- Card Gán Map Cho Vòng Đấu (Dành cho Host) -->
-                    <div class="card" style="border-top: 4px solid #3b82f6; margin-bottom: 20px;" id="assignMapCard">
-                        <h3 style="margin: 0 0 10px 0; color: #1d4ed8;">📌 Phân Bổ Map & Thời Điểm Công Bố</h3>
-                        <p style="color: #64748b; font-size: 0.88rem; margin-top: 0;">
-                            Chọn Map cho từng vòng thi đấu và thiết lập thời điểm tiết lộ map cho tuyển thủ.
-                        </p>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                            <div>
-                                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Chọn Vòng Đấu:</label>
-                                <select id="assignRoundSelect" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                                    <option value="">-- Chưa khởi động vòng thi đấu --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Chọn Map Tùy Chỉnh:</label>
-                                <select id="assignMapSelect" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                                    <option value="">(Bản đồ mặc định 9x9)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 14px;">
-                            <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Thời Điểm Công Bố Map (Bảo Mật Trước Giờ):</label>
-                            <input type="datetime-local" id="assignAnnouncedAtInput" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                            <small style="color: #64748b; display: block; margin-top: 4px;">
-                                Để trống nếu muốn công bố ngay lập tức khi giải bắt đầu.
-                            </small>
-                        </div>
-
-                        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="submitAssignMap()">
-                            ✓ Xác Nhận Gán Map Cho Vòng
-                        </button>
-                    </div>
-
                     <!-- Card Danh Sách Map Đã Lưu -->
                     <div class="card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -546,35 +519,19 @@
                 </div>
 
                 <!-- Chọn Map cho trận -->
-                <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 20px;">
                     <label style="font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 6px;">
                         🗺️ Chọn Bản Đồ (Map) Cho Trận Này:
                     </label>
                     <div style="display: flex; gap: 8px;">
                         <select id="mcfgMapSelect" style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                            <option value="">-- Chọn map từ thư viện --</option>
+                            <option value="">Bản đồ mặc định (9×9 - Tiêu chuẩn)</option>
                         </select>
                         <button type="button" class="btn btn-secondary" onclick="previewSelectedMatchMap()" title="Xem trước map">🔍 Xem Map</button>
                     </div>
-                    <small style="color: #64748b; display: block; margin-top: 4px;">
-                        Hỗ trợ kích thước: 4×4, 5×5, 6×6, 9×9, 15×15, 18×18. Bạn có thể tạo thêm map mới tại tab <strong>"Thiết Kế & Quản Lý Map"</strong>.
+                    <small style="color: #64748b; display: block; margin-top: 6px;">
+                        💡 <em>Ghi chú:</em> Những trận không chọn map tùy chỉnh sẽ <strong>tự động sử dụng Bản đồ mặc định 9×9</strong>.
                     </small>
-                </div>
-
-                <!-- Chọn Lịch Thi Đấu (scheduled_at) -->
-                <div style="margin-bottom: 16px;">
-                    <label style="font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 6px;">
-                        📅 Thời Gian Thi Đấu Dự Kiến:
-                    </label>
-                    <input type="datetime-local" id="mcfgScheduledAtInput" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;" onchange="updateMcfgRevealNotice()">
-                </div>
-
-                <!-- Quy tắc bảo mật 24 giờ Notice -->
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px;">
-                    <strong>🔒 Quy tắc bảo mật Map:</strong>
-                    <div id="mcfgRevealNoticeText" style="color: #1e40af; margin-top: 4px;">
-                        Bản đồ sẽ được giữ bí mật và tự động công bố trước giờ thi đấu 24 giờ.
-                    </div>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -618,26 +575,25 @@
                                 <th>Cặp Đấu</th>
                                 <th>Bản Đồ (Map)</th>
                                 <th>Kích Thước</th>
-                                <th>Lịch Thi Đấu</th>
-                                <th>Giờ Mở Map</th>
+                                <th>Lượt Đấu (Wave)</th>
                                 <th>Trạng Thái</th>
                                 <th>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody id="soMatchesTableBody">
-                            <tr><td colspan="9" style="text-align: center; color: #94a3b8;">Đang tải danh sách trận...</td></tr>
+                            <tr><td colspan="8" style="text-align: center; color: #94a3b8;">Đang tải danh sách trận...</td></tr>
                         </tbody>
                     </table>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; flex-wrap: wrap; gap: 10px;">
                     <small style="color: #64748b;">
-                        * Khi công bố, nhánh đấu và lịch thi đấu sẽ được mở công khai cho tất cả thí sinh và khán giả.
+                        * Khi bắt đầu, mỗi lượt đấu tối đa 10 trận song song. Người chơi có 3 phút chuẩn bị xem map & chọn bot trước khi thi đấu.
                     </small>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-secondary" onclick="closeSetupOverviewModal()">Đóng</button>
                         <button class="btn btn-success" id="soBtnPublish" style="font-weight: 700; padding: 8px 18px;" onclick="publishTournament()">
-                            📢 Hoàn Tất Thiết Lập & Công Bố Lịch Đấu
+                            📢 Hoàn Tất Thiết Lập & Bắt Đầu Giải Đấu
                         </button>
                     </div>
                 </div>
@@ -658,10 +614,24 @@
 
                 <div style="display: inline-block; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 14px; max-width: 100%; overflow: auto;">
                     <div id="prevMapGridContainer" style="display: inline-block;"></div>
-                    <div style="display: flex; justify-content: center; gap: 14px; font-size: 0.75rem; color: #64748b; margin-top: 8px;">
-                        <span>🔴 Red Base</span>
-                        <span>🔵 Blue Base</span>
-                        <span>🪨 Đá cản</span>
+                    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; color: #334155; margin-top: 10px; background: white; padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; text-align: left;">
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <strong style="color: #dc2626;">🔴 Phe Đỏ:</strong>
+                            <span title="Căn cứ phe Đỏ">🚩 Căn cứ (0,0)</span>
+                            <span class="piece-red" title="Búa Đỏ">🪨 Búa</span>
+                            <span class="piece-red" title="Bao/Giấy Đỏ">📄 Bao</span>
+                            <span class="piece-red" title="Kéo Đỏ">✂️ Kéo</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <strong style="color: #2563eb;">🔵 Phe Xanh:</strong>
+                            <span title="Căn cứ phe Xanh">🏁 Căn cứ</span>
+                            <span class="piece-blue" title="Búa Xanh">🪨 Búa</span>
+                            <span class="piece-blue" title="Bao/Giấy Xanh">📄 Bao</span>
+                            <span class="piece-blue" title="Kéo Xanh">✂️ Kéo</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; font-size: 0.75rem; color: #64748b; border-top: 1px dashed #e2e8f0; padding-top: 4px; margin-top: 2px;">
+                            <span><strong>🪨 Ô đá cản:</strong> Vật cản cố định, quân không được đi vào.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1032,21 +1002,23 @@
             const isCreator = (currentUserId && currentDetail && currentDetail.tournament && currentDetail.tournament.creator_id === currentUserId);
 
             container.innerHTML = currentDetail.rounds.map(round => {
-                let mapBadge = '';
+                let roundMapBadge = '';
                 if (round.map_name) {
-                    if (round.is_map_announced) {
-                        mapBadge = `<span class="badge-map" style="margin-left: 8px;">🗺️ ${round.map_name} (${round.map_size}×${round.map_size}${round.rocks ? `, ${round.rocks.length} đá` : ''})</span>`;
-                    } else if (round.map_announced_at) {
-                        const announceDate = new Date(round.map_announced_at + (round.map_announced_at.endsWith('Z') ? '' : 'Z'));
-                        mapBadge = `<span class="badge-locked" style="margin-left: 8px;" title="Bảo mật map">🔒 Công bố: ${announceDate.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</span>`;
-                    }
+                    roundMapBadge = `<span class="badge-map" style="margin-left: 8px;">🗺️ ${round.map_name} (${round.map_size}×${round.map_size})</span>`;
+                }
+                let waveInfo = '';
+                if (round.total_waves && round.total_waves > 1) {
+                    waveInfo = `<span class="badge badge-waiting" style="margin-left: 8px;">Đang ở Lượt ${round.current_wave || 1}/${round.total_waves}</span>`;
                 }
 
                 return `
                 <div class="bracket-round">
                     <div class="round-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                         <span>${round.round_name}</span>
-                        ${mapBadge}
+                        <div>
+                            ${waveInfo}
+                            ${roundMapBadge}
+                        </div>
                     </div>
                     <div class="bracket-matches">
                         ${round.matches.map(m => {
@@ -1057,8 +1029,19 @@
                             const p1Joined = (m.player1_joined_at != null);
                             const p2Joined = (m.player2_joined_at != null);
 
+                            const nowTime = new Date().getTime();
+                            let checkInOpenTime = null;
+                            if (m.check_in_opens_at) {
+                                const s = m.check_in_opens_at;
+                                checkInOpenTime = new Date(s + (s.endsWith('Z') ? '' : 'Z')).getTime();
+                            }
+                            const isViewingPhase = (m.status === 'READY' && checkInOpenTime && nowTime < checkInOpenTime);
+                            const isCheckInPhase = (m.status === 'READY' && (!checkInOpenTime || nowTime >= checkInOpenTime));
+
                             let cardClass = 'match-card';
-                            if (m.status === 'READY') cardClass += ' ready';
+                            if (m.status === 'READY') {
+                                cardClass += isViewingPhase ? ' ready' : ' ready';
+                            }
                             else if (m.status === 'WAITING') cardClass += ' waiting';
                             else if (m.status === 'PLAYING') cardClass += ' playing';
                             else if (m.status === 'COMPLETED') cardClass += ' completed';
@@ -1066,25 +1049,25 @@
 
                             let statusBadge = `<span class="badge badge-waiting">${m.status}</span>`;
                             if (m.is_bye) statusBadge = `<span class="badge-bye">ĐẶC CÁCH BYE</span>`;
-                            else if (m.status === 'READY') statusBadge = `<span class="badge badge-playing">SẴN SÀNG</span>`;
-                            else if (m.status === 'WAITING') statusBadge = `<span class="badge badge-waiting">CHỜ ĐẾN GIỜ</span>`;
+                            else if (m.status === 'READY') {
+                                if (isViewingPhase) {
+                                    statusBadge = `<span class="badge" style="background: #2563eb; color: white;">👁️ XEM MAP (3P)</span>`;
+                                } else {
+                                    statusBadge = `<span class="badge badge-playing" style="background: #16a34a; color: white;">🔥 ĐIỂM DANH (10P)</span>`;
+                                }
+                            }
+                            else if (m.status === 'WAITING') statusBadge = `<span class="badge badge-waiting">CHỜ LƯỢT ĐẤU</span>`;
                             else if (m.status === 'PLAYING') statusBadge = `<span class="badge badge-playing">ĐANG THI ĐẤU</span>`;
                             else if (m.status === 'COMPLETED') statusBadge = `<span class="badge badge-ready">XONG</span>`;
                             else if (m.status === 'FORFEIT') statusBadge = `<span class="badge badge-forfeit">XỬ THUA</span>`;
 
-                            const canJoin = (m.status === 'READY' && isMyMatch && ((isP1 && !p1Joined) || (isP2 && !p2Joined)));
-                            const hasJoined = (m.status === 'READY' && isMyMatch && ((isP1 && p1Joined) || (isP2 && p2Joined)));
-
-                            let timeInfo = '';
-                            if (m.scheduled_at) {
-                                const schedTime = new Date(m.scheduled_at + (m.scheduled_at.endsWith('Z') ? '' : 'Z'));
-                                timeInfo = `<span style="font-size: 0.72rem; color: #64748b;">📅 ${schedTime.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</span>`;
-                            }
+                            const canJoin = (isCheckInPhase && isMyMatch && ((isP1 && !p1Joined) || (isP2 && !p2Joined)));
+                            const hasJoined = (isCheckInPhase && isMyMatch && ((isP1 && p1Joined) || (isP2 && p2Joined)));
 
                             return `
                                 <div class="${cardClass}" id="match-card-${m.id}">
                                     <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>Trận #${m.match_order + 1} ${timeInfo}</span>
+                                        <span>Trận #${m.match_order + 1} • <strong style="color: #2563eb; background: #eff6ff; padding: 1px 5px; border-radius: 4px;">Lượt ${m.wave_number || 1}</strong></span>
                                         ${statusBadge}
                                     </div>
 
@@ -1114,62 +1097,90 @@
                                         </div>
                                     ` : ''}
 
-                                    <!-- Hiển thị thông tin Map & Quy tắc bảo mật 24h -->
-                                    ${m.map_name ? `
-                                        <div style="margin-top: 6px;">
-                                            ${m.is_map_revealed ? `
-                                                <div style="display: flex; justify-content: space-between; align-items: center; background: #ede9fe; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd6fe;">
-                                                    <span style="font-size: 0.75rem; color: #6d28d9; font-weight: 600;">🗺️ ${m.map_name} (${m.map_size}×${m.map_size})</span>
-                                                    <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.7rem;" onclick="openMapPreviewModal(${m.map_id})">🔍 Xem Map</button>
-                                                </div>
-                                            ` : `
-                                                <div style="background: #fef3c7; padding: 4px 8px; border-radius: 6px; border: 1px solid #fde68a; font-size: 0.72rem; color: #b45309; display: flex; justify-content: space-between; align-items: center;" title="Bản đồ được bảo mật đến 24h trước trận đấu">
-                                                    <span>🔒 Map bảo mật đến: <strong>${m.map_reveal_at ? new Date(m.map_reveal_at + (m.map_reveal_at.endsWith('Z') ? '' : 'Z')).toLocaleString('vi-VN', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : 'trước giờ đấu 24h'}</strong></span>
-                                                    ${isCreator ? `<button class="btn btn-secondary" style="padding: 1px 5px; font-size: 0.68rem;" onclick="openMapPreviewModal(${m.map_id})">Xem (Host)</button>` : ''}
-                                                </div>
-                                            `}
+                                    <!-- Thông báo hàng đợi nếu trận đang ở trạng thái WAITING -->
+                                    ${m.status === 'WAITING' ? `
+                                        <div style="background: #f1f5f9; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.74rem; color: #334155; margin-top: 6px;">
+                                            ⏳ <strong>Đang chờ lượt đấu:</strong> Bạn sẽ đấu ở <strong>Lượt ${m.wave_number || 1}</strong> (Hiện tại đang diễn ra <strong>Lượt ${m.current_wave || round.current_wave || 1}</strong>).
                                         </div>
-                                    ` : (!m.is_bye ? `
-                                        <div style="margin-top: 6px; font-size: 0.72rem; color: #d97706; font-style: italic;">
-                                            ⚠️ Chưa chọn Map cho trận này
-                                        </div>
-                                    ` : '')}
+                                    ` : ''}
 
-                                    <!-- Nút Host cấu hình Map & Lịch đấu riêng cho trận -->
-                                    ${(isCreator && !m.is_bye && m.status !== 'COMPLETED' && m.status !== 'FORFEIT') ? `
+                                    <!-- Giai đoạn 1: Bắt buộc chờ 3 phút xem map (Không được đấu ngay) -->
+                                    ${isViewingPhase ? `
+                                        <div style="background: #eff6ff; padding: 6px 8px; border-radius: 6px; border: 1px solid #bfdbfe; margin-top: 6px;">
+                                            <div style="font-size: 0.78rem; font-weight: 700; color: #1e40af;">👁️ BẮT BUỘC CHỜ 3 PHÚT ĐỂ XEM MAP (LƯỢT ${m.wave_number || 1})</div>
+                                            <div class="match-timer" id="timer-${m.id}" data-deadline="${m.check_in_opens_at}" data-type="open" style="font-size: 0.75rem; color: #b45309; font-weight: 600; margin-top: 2px;">
+                                                ⏱️ Mở điểm danh sau: <span class="countdown-val">Đang tính...</span>
+                                            </div>
+                                            <div style="font-size: 0.72rem; color: #b91c1c; margin-top: 3px; font-weight: 600;">
+                                                ⚠️ Không được đấu ngay trong 3 phút này. Bạn hãy xem map và chọn bot phù hợp.
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Giai đoạn 2: 10 phút mở điểm danh thi đấu -->
+                                    ${isCheckInPhase ? `
+                                        <div style="background: #ecfdf5; padding: 6px 8px; border-radius: 6px; border: 1px solid #a7f3d0; margin-top: 6px;">
+                                            <div style="font-size: 0.78rem; font-weight: 700; color: #047857;">🔥 ĐÃ MỞ ĐIỂM DANH THI ĐẤU (10 PHÚT)!</div>
+                                            ${m.participation_deadline ? `
+                                                <div class="match-timer" id="timer-${m.id}" data-deadline="${m.participation_deadline}" data-type="deadline" style="font-size: 0.75rem; color: #b45309; font-weight: 600; margin-top: 2px;">
+                                                    ⏱️ Hạn chót điểm danh: <span class="countdown-val">Đang tính...</span>
+                                                </div>
+                                            ` : ''}
+                                            <div style="font-size: 0.72rem; color: #475569; margin-top: 2px;">
+                                                Trận đấu sẽ tự động bắt đầu ngay khi cả 2 tuyển thủ điểm danh.
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Hiển thị thông tin Map (Công khai để người chơi xem và chọn bot) -->
+                                    <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center; background: #ede9fe; padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd6fe;">
+                                        <span style="font-size: 0.75rem; color: #6d28d9; font-weight: 600;">🗺️ ${m.map_name || 'Bản đồ mặc định (9×9)'}</span>
+                                        <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.7rem;" onclick="openMapPreviewModal(${m.map_id || 'null'})">🔍 Xem Map</button>
+                                    </div>
+
+                                    <!-- Nút Host cấu hình Map cho trận nếu chưa đấu -->
+                                    ${(isCreator && !m.is_bye && m.status !== 'COMPLETED' && m.status !== 'FORFEIT' && m.status !== 'PLAYING') ? `
                                         <div style="margin-top: 6px;">
                                             <button class="btn btn-secondary" style="width: 100%; padding: 4px 6px; font-size: 0.75rem; background: #f8fafc; border-color: #cbd5e1; font-weight: 600;" onclick="openMatchConfigModal(${m.id})">
-                                                ⚙️ Cấu Hình Map & Giờ Đấu
+                                                ⚙️ Đổi Bản Đồ Cho Trận Này
                                             </button>
                                         </div>
                                     ` : ''}
 
-                                    <!-- Thời gian đếm ngược 10 phút khi READY -->
-                                    ${m.status === 'READY' && m.participation_deadline ? `
-                                        <div class="match-timer" id="timer-${m.id}" data-deadline="${m.participation_deadline}">
-                                            ⏱️ Hạn chót điểm danh: <span class="countdown-val">Đang tính...</span>
-                                        </div>
-                                    ` : ''}
+                                    <!-- Tuyển thủ chọn Bot & điểm danh khi đã đến lượt (READY) -->
+                                    ${(m.status === 'READY' && isMyMatch) ? `
+                                        <div style="margin-top: 8px; background: #eff6ff; padding: 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                                            <label style="font-size: 0.75rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">
+                                                🤖 Chọn Bot cho trận này:
+                                            </label>
+                                            <div style="display: flex; gap: 6px;">
+                                                <select id="matchBotSelect_${m.id}" style="flex: 1; padding: 4px 6px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                                    ${(myBots && myBots.length > 0) ? myBots.map(b => `<option value="${b.id}" ${(isP1 && m.player1_bot_name === b.name) || (isP2 && m.player2_bot_name === b.name) ? 'selected' : ''}>${b.name}</option>`).join('') : '<option value="">(Chưa có bot - Dùng mặc định)</option>'}
+                                                </select>
+                                                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.78rem;" onclick="submitMatchBot(${m.id})">
+                                                    Lưu Bot
+                                                </button>
+                                            </div>
 
-                                    <!-- Thông báo đếm ngược mở check-in khi WAITING -->
-                                    ${m.status === 'WAITING' && m.check_in_opens_at ? `
-                                        <div class="match-timer" id="timer-wait-${m.id}" data-deadline="${m.check_in_opens_at}" data-type="open">
-                                            ⏳ Mở điểm danh trong: <span class="countdown-val">Đang tính...</span>
-                                        </div>
-                                    ` : ''}
+                                            ${isViewingPhase ? `
+                                                <div style="margin-top: 6px; text-align: center; background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px dashed #cbd5e1; font-size: 0.74rem; color: #64748b;">
+                                                    🔒 <em>Bắt buộc chờ hết 3 phút xem map để mở cổng điểm danh.</em>
+                                                </div>
+                                            ` : ''}
 
-                                    <!-- Nút tham gia điểm danh cho tuyển thủ -->
-                                    ${canJoin ? `
-                                        <div style="margin-top: 8px;">
-                                            <button class="btn btn-primary" style="width: 100%; padding: 6px; font-size: 0.85rem;" onclick="joinMatch(${m.id})">
-                                                ⚔️ Tham Gia Thi Đấu (Điểm Danh)
-                                            </button>
-                                        </div>
-                                    ` : ''}
+                                            ${isCheckInPhase && canJoin ? `
+                                                <div style="margin-top: 6px;">
+                                                    <button class="btn btn-primary" style="width: 100%; padding: 6px; font-size: 0.8rem; font-weight: 700; background: #2563eb;" onclick="joinMatch(${m.id})">
+                                                        ✓ Điểm Danh Tham Gia (10 Phút)
+                                                    </button>
+                                                </div>
+                                            ` : ''}
 
-                                    ${hasJoined ? `
-                                        <div style="margin-top: 8px; font-size: 0.8rem; color: #16a34a; font-weight: 600; text-align: center;">
-                                            ✅ Bạn đã điểm danh! Chờ đối thủ tham gia...
+                                            ${isCheckInPhase && hasJoined ? `
+                                                <div style="margin-top: 6px; font-size: 0.78rem; color: #16a34a; font-weight: 600; text-align: center; background: #f0fdf4; padding: 5px; border-radius: 4px; border: 1px solid #bbf7d0;">
+                                                    ✅ Bạn đã điểm danh thành công! Đang chờ đối thủ điểm danh...
+                                                </div>
+                                            ` : ''}
                                         </div>
                                     ` : ''}
 
@@ -1207,6 +1218,10 @@
                     if (diff <= 0) {
                         span.innerText = isOpening ? "Đã đến giờ mở điểm danh!" : "Hết hạn (Đang xử lý...)";
                         span.style.color = isOpening ? "#16a34a" : "#dc2626";
+                        if (isOpening && !el.getAttribute('data-refreshed')) {
+                            el.setAttribute('data-refreshed', 'true');
+                            setTimeout(() => loadTournament(), 1000);
+                        }
                     } else {
                         const mins = Math.floor(diff / 60);
                         const secs = diff % 60;
@@ -1380,20 +1395,42 @@
         let editorTool = 'place';
         let editingMapId = null;
 
+        function getInitialPieces(size) {
+            const pieces = {};
+            if (size === 4 || size === 5 || size === 6) {
+                // Bàn cờ 4x4, 5x5, 6x6: mỗi bên 3 quân (1 Búa, 1 Giấy/Bao, 1 Kéo)
+                pieces['0,1'] = { team: 'red', icon: '🪨', name: 'Búa Đỏ' };
+                pieces['1,0'] = { team: 'red', icon: '📄', name: 'Bao Đỏ' };
+                pieces['1,1'] = { team: 'red', icon: '✂️', name: 'Kéo Đỏ' };
+
+                pieces[`${size-1},${size-2}`] = { team: 'blue', icon: '🪨', name: 'Búa Xanh' };
+                pieces[`${size-2},${size-1}`] = { team: 'blue', icon: '📄', name: 'Bao Xanh' };
+                pieces[`${size-2},${size-2}`] = { team: 'blue', icon: '✂️', name: 'Kéo Xanh' };
+            } else {
+                // Bàn cờ từ 9x9 trở lên: mỗi bên 6 quân (2 Búa, 2 Kéo, 2 Giấy)
+                pieces['0,1'] = { team: 'red', icon: '🪨', name: 'Búa Đỏ' };
+                pieces['1,0'] = { team: 'red', icon: '📄', name: 'Bao Đỏ' };
+                pieces['1,1'] = { team: 'red', icon: '✂️', name: 'Kéo Đỏ' };
+                pieces['0,2'] = { team: 'red', icon: '🪨', name: 'Búa Đỏ' };
+                pieces['2,0'] = { team: 'red', icon: '📄', name: 'Bao Đỏ' };
+                pieces['2,2'] = { team: 'red', icon: '✂️', name: 'Kéo Đỏ' };
+
+                pieces[`${size-1},${size-2}`] = { team: 'blue', icon: '🪨', name: 'Búa Xanh' };
+                pieces[`${size-2},${size-1}`] = { team: 'blue', icon: '📄', name: 'Bao Xanh' };
+                pieces[`${size-2},${size-2}`] = { team: 'blue', icon: '✂️', name: 'Kéo Xanh' };
+                pieces[`${size-1},${size-3}`] = { team: 'blue', icon: '🪨', name: 'Búa Xanh' };
+                pieces[`${size-3},${size-1}`] = { team: 'blue', icon: '📄', name: 'Bao Xanh' };
+                pieces[`${size-3},${size-3}`] = { team: 'blue', icon: '✂️', name: 'Kéo Xanh' };
+            }
+            return pieces;
+        }
+
         function getReservedPositions(size) {
             const reserved = new Set();
             reserved.add(`0,0`);
             reserved.add(`${size - 1},${size - 1}`);
-            if (size === 4 || size === 5 || size === 6) {
-                // Bàn cờ 4x4, 5x5, 6x6: mỗi bên 3 quân (1 Búa, 1 Giấy, 1 Kéo)
-                [[0,1], [1,0], [1,1],
-                 [size-1, size-2], [size-2, size-1], [size-2, size-2]].forEach(([r,c]) => reserved.add(`${r},${c}`));
-            } else {
-                // Bàn cờ từ 9x9 trở lên: mỗi bên 6 quân (2 Búa, 2 Kéo, 2 Giấy)
-                [[0,1], [1,0], [1,1], [0,2], [2,0], [2,2],
-                 [size-1, size-2], [size-2, size-1], [size-2, size-2],
-                 [size-1, size-3], [size-3, size-1], [size-3, size-3]].forEach(([r,c]) => reserved.add(`${r},${c}`));
-            }
+            const pieces = getInitialPieces(size);
+            Object.keys(pieces).forEach(k => reserved.add(k));
             return reserved;
         }
 
@@ -1441,6 +1478,7 @@
             const container = document.getElementById('editorGridContainer');
             container.innerHTML = '';
             const reserved = getReservedPositions(editorSize);
+            const initPieces = getInitialPieces(editorSize);
 
             const cellDim = editorSize >= 18 ? 20 : (editorSize >= 15 ? 24 : (editorSize >= 9 ? 34 : 44));
             const cellFontSize = editorSize >= 15 ? '10px' : (editorSize >= 9 ? '14px' : '20px');
@@ -1468,11 +1506,16 @@
                         } else if (r === editorSize - 1 && c === editorSize - 1) {
                             cell.innerHTML = '🏁';
                             cell.title = 'Căn cứ phe Xanh (Blue Base)';
-                        } else {
-                            const isRed = (r === 0 && c === 1) || (r === 1 && c === 0) || (r === 1 && c === 1) ||
-                                          (editorSize >= 9 && ((r === 0 && c === 2) || (r === 2 && c === 0) || (r === 2 && c === 2)));
-                            cell.innerHTML = isRed ? '🔴' : '🔵';
-                            cell.title = isRed ? 'Quân xuất phát phe Đỏ' : 'Quân xuất phát phe Xanh';
+                        } else if (initPieces[coordKey]) {
+                            const p = initPieces[coordKey];
+                            if (p.team === 'red') {
+                                cell.classList.add('piece-red-cell');
+                                cell.innerHTML = `<span class="piece-red">${p.icon}</span>`;
+                            } else {
+                                cell.classList.add('piece-blue-cell');
+                                cell.innerHTML = `<span class="piece-blue">${p.icon}</span>`;
+                            }
+                            cell.title = `${p.name} (Vị trí xuất phát cố định)`;
                         }
                     } else {
                         if (editorRocks.has(coordKey)) {
@@ -2124,33 +2167,19 @@
                 .then(res => res.json())
                 .then(maps => {
                     const sel = document.getElementById('mcfgMapSelect');
-                    if (!maps || maps.length === 0) {
-                        sel.innerHTML = '<option value="">(Chưa có map tùy chỉnh nào - Hãy tạo tại tab Map)</option>';
-                    } else {
-                        sel.innerHTML = '<option value="">-- Chọn map cho trận --</option>' +
-                            maps.map(m => `<option value="${m.id}" ${match.map_id === m.id ? 'selected' : ''}>🗺️ ${m.name} (${m.size}×${m.size}, ${m.rocks ? m.rocks.length : 0} đá)</option>`).join('');
+                    let opts = '<option value="">Bản đồ mặc định (9×9 - Tiêu chuẩn)</option>';
+                    if (maps && maps.length > 0) {
+                        opts += maps.map(m => `<option value="${m.id}" ${match.map_id === m.id ? 'selected' : ''}>🗺️ ${m.name} (${m.size}×${m.size}, ${m.rocks ? m.rocks.length : 0} đá)</option>`).join('');
                     }
+                    sel.innerHTML = opts;
                     if (match.map_id) {
                         sel.value = match.map_id;
+                    } else {
+                        sel.value = "";
                     }
                 })
                 .catch(err => console.error("Lỗi tải maps:", err));
 
-            // Set scheduled_at input
-            const schedInput = document.getElementById('mcfgScheduledAtInput');
-            if (match.scheduled_at) {
-                const d = new Date(match.scheduled_at + (match.scheduled_at.endsWith('Z') ? '' : 'Z'));
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                const hours = String(d.getHours()).padStart(2, '0');
-                const mins = String(d.getMinutes()).padStart(2, '0');
-                schedInput.value = `${year}-${month}-${day}T${hours}:${mins}`;
-            } else {
-                schedInput.value = '';
-            }
-
-            updateMcfgRevealNotice();
             document.getElementById('matchConfigModal').style.display = 'flex';
         }
 
@@ -2160,34 +2189,8 @@
 
         function previewSelectedMatchMap() {
             const sel = document.getElementById('mcfgMapSelect');
-            const mapId = sel.value;
-            if (!mapId) {
-                alert("Vui lòng chọn một map trước khi xem!");
-                return;
-            }
-            openMapPreviewModal(parseInt(mapId));
-        }
-
-        function updateMcfgRevealNotice() {
-            const schedVal = document.getElementById('mcfgScheduledAtInput').value;
-            const noticeEl = document.getElementById('mcfgRevealNoticeText');
-            if (!schedVal) {
-                noticeEl.innerHTML = "Bản đồ sẽ được giữ bí mật và tự động công bố trước giờ thi đấu 24 giờ khi bạn lên lịch.";
-                noticeEl.style.color = '#1e40af';
-                return;
-            }
-
-            const schedDate = new Date(schedVal);
-            const now = new Date();
-            const revealDate = new Date(schedDate.getTime() - 24 * 60 * 60 * 1000);
-
-            if (now >= revealDate) {
-                noticeEl.innerHTML = `⚡ <strong>Công bố ngay lập tức!</strong> (Do giờ thi đấu còn dưới 24 giờ tính từ hiện tại: ${schedDate.toLocaleString('vi-VN')}).`;
-                noticeEl.style.color = '#15803d';
-            } else {
-                noticeEl.innerHTML = `🔒 <strong>Bảo mật bản đồ:</strong> Thí sinh và khán giả sẽ được mở xem map vào lúc <strong>${revealDate.toLocaleString('vi-VN')}</strong> (đúng 24 giờ trước khi trận đấu bắt đầu).`;
-                noticeEl.style.color = '#1e40af';
-            }
+            const mapId = sel.value ? parseInt(sel.value) : null;
+            openMapPreviewModal(mapId);
         }
 
         function saveMatchConfig() {
@@ -2195,15 +2198,12 @@
 
             const mapVal = document.getElementById('mcfgMapSelect').value;
             const mapId = mapVal ? parseInt(mapVal) : null;
-            const schedVal = document.getElementById('mcfgScheduledAtInput').value;
-            const scheduledAt = schedVal ? new Date(schedVal).toISOString() : null;
 
             fetch(`${API_BASE}/api/tournaments/${tournId}/matches/${currentMcfgMatchId}/config`, {
                 method: 'PUT',
                 headers: authHeaders(),
                 body: JSON.stringify({
-                    map_id: mapId,
-                    scheduled_at: scheduledAt
+                    map_id: mapId
                 })
             })
             .then(res => {
@@ -2211,7 +2211,7 @@
                 return res.json();
             })
             .then(updatedMatch => {
-                alert("Đã lưu cấu hình trận đấu thành công!");
+                alert("Đã lưu cấu hình map cho trận đấu thành công!");
                 closeMatchConfigModal();
                 loadTournament();
             })
@@ -2245,7 +2245,7 @@
         function renderSetupOverview(data) {
             setupOverviewMatches = data.matches || [];
             const badge = document.getElementById('soProgressBadge');
-            badge.innerText = `${data.configured_matches} / ${data.total_matches} trận đã cấu hình`;
+            badge.innerText = `${data.configured_matches} / ${data.total_matches} trận sẵn sàng`;
             badge.className = data.can_publish ? 'badge badge-ready' : 'badge badge-waiting';
 
             const statusText = document.getElementById('soPublishStatusText');
@@ -2253,13 +2253,13 @@
             const errorsBox = document.getElementById('soErrorsBox');
 
             if (data.can_publish) {
-                statusText.innerHTML = '✅ Đã đủ điều kiện công bố';
+                statusText.innerHTML = '✅ Đã đủ điều kiện bắt đầu';
                 statusText.style.color = '#16a34a';
                 btnPublish.disabled = false;
                 btnPublish.className = 'btn btn-success';
                 errorsBox.style.display = 'none';
             } else {
-                statusText.innerHTML = '⚠️ Chưa đủ điều kiện công bố';
+                statusText.innerHTML = '⚠️ Chưa đủ điều kiện bắt đầu';
                 statusText.style.color = '#dc2626';
                 btnPublish.disabled = true;
                 btnPublish.className = 'btn btn-secondary';
@@ -2274,17 +2274,16 @@
 
             const tbody = document.getElementById('soMatchesTableBody');
             if (!data.matches || data.matches.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #94a3b8;">Không có trận đấu nào.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #94a3b8;">Không có trận đấu nào.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = data.matches.map(m => {
                 const pair = `${m.player1_name || 'TBD'} ⚔️ ${m.player2_name || (m.is_bye ? 'BYE' : 'TBD')}`;
-                const mapDisplay = m.map_name ? `🗺️ ${m.map_name}` : '<span style="color: #dc2626; font-weight: 600;">Chưa chọn</span>';
-                const sizeDisplay = m.map_size ? `${m.map_size}×${m.map_size}` : '-';
-                const schedDisplay = m.scheduled_at ? new Date(m.scheduled_at + (m.scheduled_at.endsWith('Z') ? '' : 'Z')).toLocaleString('vi-VN') : '<span style="color: #dc2626; font-weight: 600;">Chưa đặt</span>';
-                const revealDisplay = m.map_reveal_at ? new Date(m.map_reveal_at + (m.map_reveal_at.endsWith('Z') ? '' : 'Z')).toLocaleString('vi-VN') : '-';
-                const statusBadge = m.is_bye ? '<span class="badge-bye">BYE</span>' : (m.is_configured ? '<span class="badge badge-ready">✓ Đủ điều kiện</span>' : '<span class="badge badge-forfeit">Chưa đủ</span>');
+                const mapDisplay = m.map_name ? `🗺️ ${m.map_name}` : 'Bản đồ mặc định (9×9)';
+                const sizeDisplay = m.map_size ? `${m.map_size}×${m.map_size}` : '9×9';
+                const waveDisplay = `<span style="font-weight: 600; color: #2563eb;">Lượt ${m.wave_number || 1}</span>`;
+                const statusBadge = m.is_bye ? '<span class="badge-bye">BYE</span>' : '<span class="badge badge-ready">✓ Sẵn sàng</span>';
 
                 return `
                     <tr>
@@ -2293,13 +2292,12 @@
                         <td><strong>${pair}</strong></td>
                         <td>${mapDisplay}</td>
                         <td>${sizeDisplay}</td>
-                        <td>${schedDisplay}</td>
-                        <td style="font-size: 0.8rem; color: #475569;">${revealDisplay}</td>
+                        <td>${waveDisplay}</td>
                         <td>${statusBadge}</td>
                         <td>
                             ${!m.is_bye ? `
                                 <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.8rem;" onclick="closeSetupOverviewModal(); openMatchConfigModal(${m.match_id});">
-                                    ✏️ Cấu hình
+                                    ✏️ Đổi map
                                 </button>
                             ` : '<span style="color: #94a3b8;">-</span>'}
                         </td>
@@ -2309,7 +2307,7 @@
         }
 
         function publishTournament() {
-            if (!confirm("XÁC NHẬN CÔNG BỐ LỊCH THI ĐẤU VÀ NHÁNH ĐẤU?\n\nSau khi công bố:\n1. Nhánh đấu và danh sách trận sẽ hiển thị công khai cho tất cả thí sinh và khán giả.\n2. Bản đồ các trận sẽ được tự động bảo mật và chỉ mở trước giờ thi đấu 24 giờ.\n3. Các trận đấu sẽ bắt đầu đúng theo lịch trình đã thiết lập.")) return;
+            if (!confirm("XÁC NHẬN BẮT ĐẦU GIẢI ĐẤU VÀ CÔNG BỐ LỊCH ĐẤU?\n\n- Các trận đấu được xếp theo lượt (tối đa 10 trận song song/lượt).\n- Lượt 1 sẽ bắt đầu ngay với 3 phút để người chơi xem map và chọn bot.\n- Những trận host không chỉ định map sẽ dùng map mặc định 9×9.")) return;
 
             fetch(`${API_BASE}/api/tournaments/${tournId}/publish`, {
                 method: 'POST',
@@ -2333,7 +2331,13 @@
         // LOGIC XEM TRƯỚC MAP TRỰC QUAN (PHASE 4)
         // ==============================================================
         function openMapPreviewModal(mapId) {
-            if (!mapId) return;
+            if (!mapId) {
+                document.getElementById('prevMapTitle').innerText = `🗺️ Bản đồ mặc định (9×9)`;
+                document.getElementById('prevMapSubtitle').innerText = `Kích thước: 9×9 • Không có đá cản (Tiêu chuẩn)`;
+                renderPreviewGrid(9, []);
+                document.getElementById('mapPreviewModal').style.display = 'flex';
+                return;
+            }
             fetch(`${API_BASE}/api/tournaments/${tournId}/maps/${mapId}`, {
                 headers: authHeaders()
             })
@@ -2350,7 +2354,7 @@
                 document.getElementById('mapPreviewModal').style.display = 'flex';
             })
             .catch(err => {
-                alert("Thông báo bảo mật: " + err.message);
+                alert("Thông báo: " + err.message);
             });
         }
 
@@ -2362,7 +2366,15 @@
             const container = document.getElementById('prevMapGridContainer');
             container.innerHTML = '';
             const rockSet = new Set((rocks || []).map(([r, c]) => `${r},${c}`));
-            const cellSize = size > 9 ? (size > 15 ? 18 : 22) : 32;
+            const initialPieces = getInitialPieces(size);
+
+            let cellSize = 36;
+            if (size <= 6) cellSize = 54;
+            else if (size <= 9) cellSize = 38;
+            else if (size <= 15) cellSize = 24;
+            else cellSize = 20;
+
+            const emojiSize = Math.max(12, Math.floor(cellSize * 0.58));
 
             for (let r = 0; r < size; r++) {
                 const rowDiv = document.createElement('div');
@@ -2372,17 +2384,32 @@
                     cell.className = 'prev-cell';
                     cell.style.width = `${cellSize}px`;
                     cell.style.height = `${cellSize}px`;
-                    cell.style.fontSize = `${Math.floor(cellSize * 0.6)}px`;
+                    cell.style.fontSize = `${emojiSize}px`;
+
+                    const coordKey = `${r},${c}`;
 
                     if (r === 0 && c === 0) {
                         cell.classList.add('dest-red');
-                        cell.innerText = '🔴';
+                        cell.innerHTML = '🚩';
+                        cell.title = 'Căn cứ phe Đỏ (Red Base)';
                     } else if (r === size - 1 && c === size - 1) {
                         cell.classList.add('dest-blue');
-                        cell.innerText = '🔵';
-                    } else if (rockSet.has(`${r},${c}`)) {
+                        cell.innerHTML = '🏁';
+                        cell.title = 'Căn cứ phe Xanh (Blue Base)';
+                    } else if (initialPieces[coordKey]) {
+                        const p = initialPieces[coordKey];
+                        if (p.team === 'red') {
+                            cell.classList.add('piece-red');
+                            cell.innerHTML = `<span class="piece-red">${p.icon}</span>`;
+                        } else {
+                            cell.classList.add('piece-blue');
+                            cell.innerHTML = `<span class="piece-blue">${p.icon}</span>`;
+                        }
+                        cell.title = `${p.name} (Vị trí xuất phát ban đầu)`;
+                    } else if (rockSet.has(coordKey)) {
                         cell.classList.add('rock');
                         cell.innerText = '🪨';
+                        cell.title = 'Đá cản cố định';
                     }
                     rowDiv.appendChild(cell);
                 }
@@ -2390,14 +2417,65 @@
             }
         }
 
+        function loadUserBots() {
+            return fetch(`${API_BASE}/api/bots/ready`, { headers: authHeaders() })
+                .then(res => res.ok ? res.json() : [])
+                .then(bots => {
+                    myBots = bots || [];
+                })
+                .catch(() => { myBots = []; });
+        }
+
+        function submitMatchBot(matchId) {
+            const sel = document.getElementById(`matchBotSelect_${matchId}`);
+            if (!sel || !sel.value) {
+                alert("Vui lòng chọn một bot hợp lệ!");
+                return;
+            }
+            const botId = parseInt(sel.value);
+            fetch(`${API_BASE}/api/tournaments/${tournId}/matches/${matchId}/select-bot`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ bot_id: botId })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Không thể chọn bot"); });
+                return res.json();
+            })
+            .then(data => {
+                alert(data.message || "Đã lưu bot cho trận đấu thành công!");
+                loadTournament();
+            })
+            .catch(err => alert("Lỗi: " + err.message));
+        }
+
+        function startMatchNow(matchId) {
+            if (!confirm("Xác nhận bắt đầu trận đấu ngay lập tức (không cần chờ hết 3 phút chuẩn bị)?")) return;
+            fetch(`${API_BASE}/api/tournaments/${tournId}/matches/${matchId}/start-now`, {
+                method: 'POST',
+                headers: authHeaders()
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(e => { throw new Error(e.detail || "Không thể bắt đầu trận"); });
+                return res.json();
+            })
+            .then(data => {
+                alert(data.message || "Trận đấu đã bắt đầu!");
+                loadTournament();
+            })
+            .catch(err => alert("Lỗi: " + err.message));
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetch(`${API_BASE}/api/users/me`, { headers: authHeaders() })
                 .then(res => res.json())
                 .then(user => {
                     if (user && user.id) currentUserId = user.id;
-                    loadTournament();
+                    loadUserBots().finally(() => loadTournament());
                 })
-                .catch(() => loadTournament());
+                .catch(() => {
+                    loadUserBots().finally(() => loadTournament());
+                });
         });
     </script>
 </body>

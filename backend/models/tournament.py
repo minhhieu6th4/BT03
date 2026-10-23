@@ -73,6 +73,7 @@ class TournamentRound(Base):
     status = Column(String(20), default="PENDING", nullable=False) # PENDING, IN_PROGRESS, COMPLETED
     map_id = Column(Integer, ForeignKey("tournament_maps.id", ondelete="SET NULL"), nullable=True)
     map_announced_at = Column(DateTime, nullable=True)
+    current_wave = Column(Integer, default=1, nullable=False)
 
     tournament = relationship("Tournament", back_populates="rounds")
     matches = relationship("TournamentMatch", back_populates="round", cascade="all, delete-orphan", order_by="TournamentMatch.match_order")
@@ -86,6 +87,7 @@ class TournamentMatch(Base):
     tournament_id = Column(Integer, ForeignKey("tournaments.id", ondelete="CASCADE"), nullable=False, index=True)
     round_id = Column(Integer, ForeignKey("tournament_rounds.id", ondelete="CASCADE"), nullable=False, index=True)
     match_order = Column(Integer, nullable=False)
+    wave_number = Column(Integer, default=1, nullable=False)
     player1_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     player2_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     player1_bot_id = Column(Integer, ForeignKey("bots.id", ondelete="SET NULL"), nullable=True)

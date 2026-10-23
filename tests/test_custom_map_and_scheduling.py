@@ -192,7 +192,8 @@ def test_tournament_map_secrecy_and_disclosure(db_session):
     - Trước thời điểm map_announced_at: người chơi thường bị chặn xem rocks (403),
       trong get_tournament_detail rocks bị ẩn (None/censored).
     - Chủ giải (Host) luôn xem được rocks để chuẩn bị giải.
-    - Sau khi đến thời điểm map_announced_at: mọi người chơi đều xem được rocks công khai.
+    - Mọi người chơi đều xem được rocks công khai và trực tiếp.
+    - Trận đấu không đổi map tự động sử dụng map mặc định 9x9.
     """
     host = User(username="host_secret", email="hs@test.com", hashed_password="pwd")
     player = User(username="player_secret", email="ps@test.com", hashed_password="pwd")
@@ -213,38 +214,19 @@ def test_tournament_map_secrecy_and_disclosure(db_session):
     detail = TournamentService.start_tournament(db_session, t.id, host, auto_publish=True)
     round_1 = detail.rounds[0]
 
-    # Gán map cho vòng 1 với thời gian công bố trong tương lai (sau 1 giờ)
-    future_announcement = datetime.utcnow() + timedelta(hours=1)
-    TournamentService.assign_round_map(
-        db_session, t.id, round_1.id, host, m.id, map_announced_at=future_announcement
-    )
-
-    # 1. Người chơi thường xem map đơn lẻ -> Bị từ chối 403 với thông báo thời gian bảo mật
-    with pytest.raises(HTTPException) as exc:
-        TournamentService.get_map(db_session, t.id, m.id, user=player)
-    assert exc.value.status_code == 403
-    assert "bảo mật" in str(exc.value.detail).lower()
+    # 1. Người chơi thường xem map đơn lẻ -> Xem được ngay lập tức, không bị 403
+    player_view = TournamentService.get_map(db_session, t.id, m.id, user=player)
+    assert player_view.rocks == [[1, 2]]
 
     # 2. Host xem map đơn lẻ -> Luôn thành công và xem được rocks
     host_view = TournamentService.get_map(db_session, t.id, m.id, user=host)
     assert host_view.rocks == [[1, 2]]
 
-    # 3. Người chơi thường xem tournament detail -> round có rocks = None, is_map_announced = False
-    player_detail = TournamentService.get_tournament_detail(db_session, t.id, current_user=player)
-    r1_player = player_detail.rounds[0]
-    assert r1_player.is_map_announced is False
-    assert r1_player.rocks is None
-
-    # 4. Khi đến giờ công bố (chỉnh lùi map_announced_at về quá khứ)
-    db_r1 = db_session.query(TournamentRound).filter(TournamentRound.id == round_1.id).first()
-    db_r1.map_announced_at = datetime.utcnow() - timedelta(minutes=5)
-    db_session.commit()
-
-    # Bây giờ người chơi thường xem tournament detail -> rocks đã được công bố!
-    revealed_detail = TournamentService.get_tournament_detail(db_session, t.id, current_user=player)
-    r1_revealed = revealed_detail.rounds[0]
-    assert r1_revealed.is_map_announced is True
-    assert r1_revealed.rocks == [[1, 2]]
+    # 3. Trận chưa gán map -> Hiển thị tên bản đồ mặc định 9x9
+    m1 = round_1.matches[0]
+    assert m1.map_id is None
+    assert "9×9" in m1.map_name or "9x9" in m1.map_name
+    assert m1.is_map_revealed is True
 
 
 # ==============================================================
@@ -359,144 +341,116 @@ def test_two_stage_knockout_private_draft_and_publish_flow(db_session):
     match1_id = r1_matches[0].id
     match2_id = r1_matches[1].id
 
-    # 3. Host kiểm tra tổng quan setup: lúc này chưa trận nào được cấu hình -> can_publish = False
+    # 3. Host kiểm tra tổng quan setup: các trận chưa gán map tự động dùng map mặc định 9x9 -> can_publish = True!
     overview_1 = TournamentService.get_setup_overview(db_session, t.id, host)
-    assert overview_1.can_publish is False
-    assert len(overview_1.errors) > 0
+    assert overview_1.can_publish is True
+    assert len(overview_1.errors) == 0
 
-    # Thử công bố ngay -> Bị backend từ chối với lỗi 400
-    with pytest.raises(HTTPException) as exc:
-        TournamentService.publish_tournament(db_session, t.id, host)
-    assert exc.value.status_code == 400
-    assert "chưa thể công bố" in str(exc.value.detail).lower()
-
-    # 4. Host cấu hình cho Trận 1 (Map 6x6, giờ thi đấu sau 2 ngày)
-    time_m1 = datetime.utcnow() + timedelta(days=2)
+    # 4. Host cấu hình cho Trận 1 (đổi sang Map 6x6 tùy chỉnh)
     TournamentService.configure_match(
         db_session, t.id, match1_id, host,
-        MatchConfigUpdateRequest(map_id=m1.id, scheduled_at=time_m1)
+        MatchConfigUpdateRequest(map_id=m1.id)
     )
 
-    # 5. Host cấu hình cho Trận 2 (Map 9x9, giờ thi đấu sau 2 ngày 1 giờ)
-    time_m2 = datetime.utcnow() + timedelta(days=2, hours=1)
-    TournamentService.configure_match(
-        db_session, t.id, match2_id, host,
-        MatchConfigUpdateRequest(map_id=m2.id, scheduled_at=time_m2)
-    )
-
-    # 6. Kiểm tra lại tổng quan setup -> Cả 2 trận đã cấu hình thành công -> can_publish = True!
-    overview_2 = TournamentService.get_setup_overview(db_session, t.id, host)
-    assert overview_2.can_publish is True
-    assert len(overview_2.errors) == 0
-
-    # 7. Host nhấn Hoàn tất và công bố lịch đấu (Publish)
+    # 5. Host nhấn Hoàn tất và bắt đầu giải đấu (Publish)
     pub_detail = TournamentService.publish_tournament(db_session, t.id, host)
-    assert pub_detail.tournament.status == "PUBLISHED"
+    assert pub_detail.tournament.status in ["IN_PROGRESS", "PUBLISHED"]
     assert pub_detail.tournament.published_at is not None
 
-    # 8. Sau khi công bố, thí sinh vào xem chi tiết giải đấu -> ĐÃ THẤY TOÀN BỘ NHÁNH ĐẤU!
+    # Lượt 1 (Wave 1) tự động kích hoạt READY với thời hạn 3 phút chuẩn bị
+    r1_matches_pub = pub_detail.rounds[0].matches
+    assert r1_matches_pub[0].status == "READY"
+    assert r1_matches_pub[0].wave_number == 1
+    assert r1_matches_pub[0].participation_deadline is not None
+    assert r1_matches_pub[0].map_name == "Bán Kết 1 (6x6)"
+    assert r1_matches_pub[1].map_name == "Bản đồ mặc định (9×9)"
+
+    # 6. Sau khi công bố, thí sinh vào xem chi tiết giải đấu -> ĐÃ THẤY TOÀN BỘ NHÁNH ĐẤU!
     player_view_published = TournamentService.get_tournament_detail(db_session, t.id, current_user=player)
-    assert player_view_published.tournament.status == "PUBLISHED"
+    assert player_view_published.tournament.status in ["IN_PROGRESS", "PUBLISHED"]
     assert len(player_view_published.rounds) == 2
     assert len(player_view_published.rounds[0].matches) == 2
 
 
 # ==============================================================
-# 6. KIỂM THỬ QUY TẮC BẢO MẬT MAP 24 GIỜ TRƯỚC GIỜ THI ĐẤU
+# 6. KIỂM THỬ HÀNG ĐỢI LƯỢT ĐẤU (WAVES - TỐI ĐA 10 TRẬN/LƯỢT) & CHỌN BOT 3 PHÚT
 # ==============================================================
 
-def test_match_map_24h_secrecy_rule(db_session):
+def test_tournament_match_waves_queue_and_bot_selection(db_session):
     """
-    Quy tắc bảo mật 24 giờ bắt buộc:
-    - Nếu trận đấu bắt đầu sau hơn 24 giờ (scheduled_at - now > 24h):
-      * Thí sinh gọi GET /maps/{id} bị từ chối 403 Forbidden kèm thời gian công bố.
-      * Trong match response của thí sinh: rocks = None, is_map_revealed = False.
-      * Host/Admin luôn xem được rocks bất kỳ lúc nào.
-    - Nếu trận đấu bắt đầu trong vòng 24 giờ (scheduled_at - now <= 24h):
-      * Thí sinh gọi GET /maps/{id} thành công và xem được rocks.
-      * Trong match response: rocks hiển thị đầy đủ, is_map_revealed = True.
+    Kiểm tra hệ thống chia lượt đấu (Waves):
+    - Mỗi lượt đấu tối đa 10 trận song song.
+    - Trận ở lượt 1 ở trạng thái READY với hạn chót 3 phút chọn bot.
+    - Trận ở lượt 2 ở trạng thái WAITING kèm thông tin lượt đấu hiện tại và lượt đấu của mình.
+    - Thí sinh có thể chọn bot cho trận đấu trong 3 phút chuẩn bị.
+    - Khi các trận lượt 1 kết thúc, hệ thống tự động đẩy lượt 2 lên READY (3 phút).
     """
-    host = User(username="host_24h", email="h24@test.com", hashed_password="pwd")
-    player = User(username="player_24h", email="p24@test.com", hashed_password="pwd")
-    users = [User(username=f"p24_{i}", email=f"p24_{i}@test.com", hashed_password="pwd") for i in range(1, 5)]
-    db_session.add_all([host, player] + users)
+    from backend.models.bot import Bot, BotVersion
+
+    host = User(username="host_waves", email="hwaves@test.com", hashed_password="pwd")
+    users = [User(username=f"pwaves_{i}", email=f"pwaves_{i}@test.com", hashed_password="pwd") for i in range(1, 29)]
+    db_session.add_all([host] + users)
     db_session.commit()
 
-    t = TournamentService.create_tournament(db_session, host, "Giải Bảo Mật 24h")
+    t = TournamentService.create_tournament(db_session, host, "Giải Đấu Lượt 28 Người")
     for u in users:
         TournamentService.register_participant(db_session, t.id, u, auto_accept=True)
 
-    # Khởi động giải
-    TournamentService.start_tournament(db_session, t.id, host, auto_publish=False)
+    # Khởi động giải đấu (auto_publish = True)
+    detail = TournamentService.start_tournament(db_session, t.id, host, auto_publish=True)
+    r1 = detail.rounds[0]
+    real_matches = [m for m in r1.matches if not m.is_bye]
+    assert len(real_matches) == 12  # 28 người -> 4 BYE, 12 trận thật vòng 1
+    assert r1.current_wave == 1
+    assert r1.total_waves == 2
 
-    # Tạo map 15x15 với đá tại (7, 7)
-    map_15 = TournamentService.create_map(
-        db_session, t.id, host,
-        TournamentMapCreate(name="Đại Chiến 15x15", size=15, rocks=[[7, 7]])
-    )
+    # 10 trận thật đầu thuộc Lượt 1 (Wave 1) -> READY với 3 phút
+    for i in range(10):
+        m = real_matches[i]
+        assert m.wave_number == 1
+        assert m.status == "READY"
+        assert m.participation_deadline is not None
+        assert m.is_map_revealed is True
 
-    r1_matches = db_session.query(TournamentMatch).filter(
-        TournamentMatch.tournament_id == t.id, TournamentMatch.is_bye == False
-    ).all()
-    m1 = r1_matches[0]
-    m2 = r1_matches[1]
+    # 2 trận thật sau thuộc Lượt 2 (Wave 2) -> WAITING
+    for i in range(10, 12):
+        m = real_matches[i]
+        assert m.wave_number == 2
+        assert m.status == "WAITING"
+        assert m.current_wave == 1
 
-    # Trận 1: Lên lịch thi đấu sau 48 giờ (vượt quá 24h -> MAP ĐANG ĐƯỢC BẢO MẬT)
-    future_48h = datetime.utcnow() + timedelta(hours=48)
-    TournamentService.configure_match(
-        db_session, t.id, m1.id, host,
-        MatchConfigUpdateRequest(map_id=map_15.id, scheduled_at=future_48h)
-    )
+    # Thí sinh của trận thật 0 tạo và chọn bot cho trận đấu của mình
+    m0 = real_matches[0]
+    p1_user = db_session.query(User).filter(User.id == m0.player1_id).first()
+    test_bot = Bot(user_id=p1_user.id, name="BotSieucap", status="READY")
+    db_session.add(test_bot)
+    db_session.commit()
+    test_ver = BotVersion(bot_id=test_bot.id, version_number=1, file_path="dummy.py", status="READY")
+    db_session.add(test_ver)
+    db_session.commit()
+    test_bot.current_version_id = test_ver.id
+    db_session.commit()
 
-    # Trận 2: Lên lịch cùng thời điểm
-    TournamentService.configure_match(
-        db_session, t.id, m2.id, host,
-        MatchConfigUpdateRequest(map_id=map_15.id, scheduled_at=future_48h)
-    )
+    bot_sel_res = TournamentService.select_match_bot(db_session, t.id, m0.id, p1_user, test_bot.id)
+    assert bot_sel_res.player1_bot_name == "BotSieucap"
 
-    # Công bố giải đấu
-    TournamentService.publish_tournament(db_session, t.id, host)
+    # Kết thúc tất cả 10 trận ở Lượt 1 -> Hệ thống tự động chuyển sang Lượt 2
+    for i in range(10):
+        TournamentService.play_match(db_session, t.id, real_matches[i].id, winner_id=real_matches[i].player1_id)
 
-    # THÍ SINH kiểm tra:
-    # 1. Gọi API xem map trực tiếp -> 403 Forbidden!
-    with pytest.raises(HTTPException) as exc:
-        TournamentService.get_map(db_session, t.id, map_15.id, user=player)
-    assert exc.value.status_code == 403
-    assert "bảo mật" in str(exc.value.detail).lower()
+    # Kiểm tra lại Vòng 1 sau khi Lượt 1 kết thúc
+    db_round = db_session.query(TournamentRound).filter(TournamentRound.id == r1.id).first()
+    assert db_round.current_wave == 2
 
-    # 2. Xem qua Tournament Detail -> rocks bị giấu, is_map_revealed = False
-    detail_player = TournamentService.get_tournament_detail(db_session, t.id, current_user=player)
-    match_view_p = detail_player.rounds[0].matches[0]
-    assert match_view_p.is_map_revealed is False
-    assert match_view_p.rocks is None
+    # 2 trận Lượt 2 đã được tự động kích hoạt sang READY với hạn chót 3 phút!
+    m10_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == real_matches[10].id).first()
+    m11_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == real_matches[11].id).first()
+    assert m10_db.status == "READY"
+    assert m10_db.participation_deadline is not None
+    assert m11_db.status == "READY"
+    assert m11_db.participation_deadline is not None
 
-    # HOST kiểm tra -> Luôn xem được rocks
-    host_map_view = TournamentService.get_map(db_session, t.id, map_15.id, user=host)
-    assert host_map_view.rocks == [[7, 7]]
-    detail_host = TournamentService.get_tournament_detail(db_session, t.id, current_user=host)
-    match_view_h = detail_host.rounds[0].matches[0]
-    assert match_view_h.is_map_revealed is True
-    assert match_view_h.rocks == [[7, 7]]
 
-    # Bây giờ: Điều chỉnh lịch thi đấu xuống còn 10 giờ nữa (nhỏ hơn 24 giờ -> BẬT CÔNG KHAI NGAY LẬP TỨC)
-    future_10h = datetime.utcnow() + timedelta(hours=10)
-    TournamentService.configure_match(
-        db_session, t.id, m1.id, host,
-        MatchConfigUpdateRequest(map_id=map_15.id, scheduled_at=future_10h)
-    )
-    TournamentService.configure_match(
-        db_session, t.id, m2.id, host,
-        MatchConfigUpdateRequest(map_id=map_15.id, scheduled_at=future_10h)
-    )
-
-    # Thí sinh gọi lại API map -> Thành công vì đã trong phạm vi 24h!
-    revealed_map = TournamentService.get_map(db_session, t.id, map_15.id, user=player)
-    assert revealed_map.rocks == [[7, 7]]
-
-    detail_player_rev = TournamentService.get_tournament_detail(db_session, t.id, current_user=player)
-    match_view_p_rev = detail_player_rev.rounds[0].matches[0]
-    assert match_view_p_rev.is_map_revealed is True
-    assert match_view_p_rev.rocks == [[7, 7]]
 
 
 # ==============================================================
@@ -589,5 +543,93 @@ def test_board_sizes_piece_distribution():
         assert blue_pieces.count(PieceType.ROCK) == 2
         assert blue_pieces.count(PieceType.PAPER) == 2
         assert blue_pieces.count(PieceType.SCISSORS) == 2
+
+
+def test_mandatory_3min_view_phase_and_10min_checkin(db_session):
+    """
+    Quy tắc 2 giai đoạn:
+    1. Người chơi bắt buộc phải chờ 3 phút để xem map:
+       - Trong 3 phút này, join_match bị chặn (HTTP 400).
+       - Không được đấu ngay trong 3 phút (start_match_now bị chặn HTTP 400).
+       - Được phép xem map và chọn bot (select_match_bot thành công).
+    2. Sau khi hết 3 phút:
+       - Mở cổng điểm danh 10 phút.
+       - Tuyển thủ có thể gọi join_match thành công.
+       - Khi cả 2 tuyển thủ cùng điểm danh, trận đấu tự động chuyển PLAYING và thi đấu.
+    """
+    from datetime import datetime, timedelta
+    import pytest
+    from backend.models.bot import Bot, BotVersion
+    from fastapi import HTTPException
+
+    host = User(username="h_phase", email="hphase@test.com", hashed_password="pwd")
+    p1 = User(username="p1_phase", email="p1phase@test.com", hashed_password="pwd")
+    p2 = User(username="p2_phase", email="p2phase@test.com", hashed_password="pwd")
+    p3 = User(username="p3_phase", email="p3phase@test.com", hashed_password="pwd")
+    p4 = User(username="p4_phase", email="p4phase@test.com", hashed_password="pwd")
+    db_session.add_all([host, p1, p2, p3, p4])
+    db_session.commit()
+
+    user_bots = {}
+    for u in [p1, p2, p3, p4]:
+        b = Bot(name=f"Bot_{u.username}", user_id=u.id, status="READY")
+        db_session.add(b)
+        db_session.commit()
+        bv = BotVersion(bot_id=b.id, version_number=1, file_path="dummy.py", status="READY")
+        db_session.add(bv)
+        db_session.commit()
+        b.current_version_id = bv.id
+        db_session.commit()
+        user_bots[u.id] = b
+
+    t = TournamentService.create_tournament(db_session, host, "Giải 3 Phút Xem Map")
+    for u in [p1, p2, p3, p4]:
+        TournamentService.register_participant(db_session, t.id, u, bot_id=user_bots[u.id].id, auto_accept=True)
+
+    detail = TournamentService.start_tournament(db_session, t.id, host, auto_publish=True)
+    m = detail.rounds[0].matches[0]
+    # Xác định đúng player 1 và player 2 của trận đấu này
+    u1 = db_session.query(User).filter(User.id == m.player1_id).first()
+    u2 = db_session.query(User).filter(User.id == m.player2_id).first()
+
+    assert m.status == "READY"
+    assert m.check_in_opens_at is not None
+    assert m.participation_deadline is not None
+
+    # Giai đoạn 1: Trong vòng 3 phút xem map
+    # 1.1 Thử điểm danh -> Phải bị chặn với lỗi 400
+    with pytest.raises(HTTPException) as exc_join:
+        TournamentService.join_match(db_session, t.id, m.id, u1)
+    assert exc_join.value.status_code == 400
+    assert "Chưa đến giờ điểm danh" in exc_join.value.detail or "3 phút xem map" in exc_join.value.detail
+
+    # 1.2 Thử bắt đầu đấu ngay -> Phải bị chặn với lỗi 400
+    with pytest.raises(HTTPException) as exc_start:
+        TournamentService.start_match_now(db_session, t.id, m.id, host)
+    assert exc_start.value.status_code == 400
+    assert "Không được đấu ngay trong thời gian này" in exc_start.value.detail or "3 phút để xem map" in exc_start.value.detail
+
+    # 1.3 Được phép chọn bot trong 3 phút xem map
+    u1_bot = user_bots[u1.id]
+    res_bot = TournamentService.select_match_bot(db_session, t.id, m.id, u1, u1_bot.id)
+    assert res_bot.player1_bot_name == u1_bot.name
+    assert res_bot.player1_joined_at is None  # Chưa điểm danh
+
+    # Giai đoạn 2: Hết 3 phút xem map, chuyển sang 10 phút điểm danh
+    m_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == m.id).first()
+    m_db.check_in_opens_at = datetime.utcnow() - timedelta(seconds=1)
+    db_session.commit()
+
+    # 2.1 Tuyển thủ 1 điểm danh thành công
+    res_join1 = TournamentService.join_match(db_session, t.id, m.id, u1)
+    assert res_join1.player1_joined_at is not None
+    assert res_join1.player2_joined_at is None
+    assert res_join1.status == "READY"
+
+    # 2.2 Tuyển thủ 2 điểm danh -> Cả 2 đã điểm danh, trận đấu tự động diễn ra
+    res_join2 = TournamentService.join_match(db_session, t.id, m.id, u2)
+    assert res_join2.player2_joined_at is not None
+    assert res_join2.status in ["PLAYING", "COMPLETED"]
+
 
 

@@ -117,6 +117,8 @@ def auto_migrate():
             ("tournament_matches", "check_in_opens_at", "DATETIME"),
             ("tournament_matches", "started_at", "DATETIME"),
             ("tournament_matches", "completed_at", "DATETIME"),
+            ("tournament_rounds", "current_wave", "INTEGER DEFAULT 1"),
+            ("tournament_matches", "wave_number", "INTEGER DEFAULT 1"),
         ]
         with engine.connect() as conn:
             for table, col, col_type in columns_to_add:

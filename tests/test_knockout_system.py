@@ -180,6 +180,11 @@ def test_match_checkin_and_single_forfeit(db_session):
     p1 = db_session.query(User).filter(User.id == match1.player1_id).first()
     p2 = db_session.query(User).filter(User.id == match1.player2_id).first()
 
+    # Trước khi điểm danh, mô phỏng đã hết 3 phút xem map (mở điểm danh)
+    m1_before = db_session.query(TournamentMatch).filter(TournamentMatch.id == match1.id).first()
+    m1_before.check_in_opens_at = datetime.utcnow() - timedelta(seconds=1)
+    db_session.commit()
+
     # Tuyển thủ 1 bấm Tham gia thi đấu
     m_res = TournamentService.join_match(db_session, t.id, match1.id, p1)
     assert m_res.player1_joined_at is not None
@@ -220,6 +225,11 @@ def test_match_double_forfeit_and_champion(db_session):
     detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     m1 = detail.rounds[0].matches[0]
     m2 = detail.rounds[0].matches[1]
+
+    # Hết 3 phút xem map cho trận 1
+    m1_db_pre = db_session.query(TournamentMatch).filter(TournamentMatch.id == m1.id).first()
+    m1_db_pre.check_in_opens_at = datetime.utcnow() - timedelta(seconds=1)
+    db_session.commit()
 
     # Trận 1: Player 1 điểm danh, Player 2 vắng mặt
     p1 = db_session.query(User).filter(User.id == m1.player1_id).first()

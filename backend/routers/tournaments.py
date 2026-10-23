@@ -11,7 +11,7 @@ from backend.schemas.tournament import (
     TournamentRegisterRequest, TournamentRespondRequest,
     TournamentMapCreate, TournamentMapUpdate, TournamentMapResponse,
     AssignRoundMapRequest, TournamentScheduleCreate,
-    MatchConfigUpdateRequest, SetupOverviewResponse
+    MatchConfigUpdateRequest, SetupOverviewResponse, MatchBotSelectRequest
 )
 from backend.dependencies.auth import get_current_user, get_optional_current_user
 from backend.services.tournament_service import TournamentService
@@ -296,5 +296,37 @@ def publish_tournament(
 ):
     """Host hoàn tất thiết lập và công bố lịch đấu cho toàn bộ người chơi/khán giả"""
     return TournamentService.publish_tournament(db, tournament_id, current_user)
+
+@router.post("/{tournament_id}/matches/{match_id}/select-bot", response_model=TournamentMatchResponse)
+def select_match_bot(
+    tournament_id: int,
+    match_id: int,
+    data: MatchBotSelectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Tuyển thủ xem map và chọn bot hợp lý trong 3 phút chuẩn bị trước khi trận đấu bắt đầu"""
+    return TournamentService.select_match_bot(
+        db=db,
+        tournament_id=tournament_id,
+        match_id=match_id,
+        user=current_user,
+        bot_id=data.bot_id
+    )
+
+@router.post("/{tournament_id}/matches/{match_id}/start-now", response_model=TournamentMatchResponse)
+def start_match_now(
+    tournament_id: int,
+    match_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bắt đầu trận đấu ngay lập tức (không cần đợi hết 3 phút chuẩn bị)"""
+    return TournamentService.start_match_now(
+        db=db,
+        tournament_id=tournament_id,
+        match_id=match_id,
+        user=current_user
+    )
 
 

@@ -11,13 +11,13 @@ from .game import Game
 from .ranking import Ranking
 from .player_stat import PlayerStat
 from .room import Room, RoomJoinRequest
-from .tournament import Tournament, TournamentParticipant, TournamentRound, TournamentMatch
+from .tournament import Tournament, TournamentParticipant, TournamentRound, TournamentMatch, TournamentMap
 from .bot import Bot, BotVersion
 
 __all__ = [
     "User", "Team", "TeamMember", "Submission", "Competition",
     "Round", "Group", "RuleSet", "Match", "Game", "Ranking",
     "PlayerStat", "Room", "RoomJoinRequest",
-    "Tournament", "TournamentParticipant", "TournamentRound", "TournamentMatch",
+    "Tournament", "TournamentParticipant", "TournamentRound", "TournamentMatch", "TournamentMap",
     "Bot", "BotVersion"
 ]

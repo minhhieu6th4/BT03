@@ -106,6 +106,17 @@ def auto_migrate():
             ("tournament_matches", "player1_joined_at", "DATETIME"),
             ("tournament_matches", "player2_joined_at", "DATETIME"),
             ("tournament_matches", "result_reason", "VARCHAR(255)"),
+            ("tournaments", "max_concurrent_matches", "INTEGER DEFAULT 4"),
+            ("tournaments", "setup_started_at", "DATETIME"),
+            ("tournaments", "published_at", "DATETIME"),
+            ("tournament_rounds", "map_id", "INTEGER"),
+            ("tournament_rounds", "map_announced_at", "DATETIME"),
+            ("tournament_matches", "map_id", "INTEGER"),
+            ("tournament_matches", "map_reveal_at", "DATETIME"),
+            ("tournament_matches", "scheduled_at", "DATETIME"),
+            ("tournament_matches", "check_in_opens_at", "DATETIME"),
+            ("tournament_matches", "started_at", "DATETIME"),
+            ("tournament_matches", "completed_at", "DATETIME"),
         ]
         with engine.connect() as conn:
             for table, col, col_type in columns_to_add:

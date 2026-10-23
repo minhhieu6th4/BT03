@@ -47,7 +47,7 @@ def test_tournament_knockout_with_4_participants(db_session):
     for u in users:
         TournamentService.register_participant(db_session, t.id, u)
 
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     assert detail.tournament.status == "IN_PROGRESS"
     # Với N=4: Bracket size = 4 -> 2 vòng đấu (Bán kết và Chung kết)
     assert len(detail.rounds) == 2
@@ -67,7 +67,7 @@ def test_tournament_knockout_with_bye_odd_participants(db_session):
     for u in users:
         TournamentService.register_participant(db_session, t.id, u)
 
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     assert detail.tournament.status == "IN_PROGRESS"
     # Với N=5: Bracket size = 8 (2^3 = 8), 3 vòng đấu: Tứ kết, Bán kết, Chung kết
     assert len(detail.rounds) == 3
@@ -90,7 +90,7 @@ def test_tournament_progression_to_champion(db_session):
     for u in users:
         TournamentService.register_participant(db_session, t.id, u)
 
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
 
     # Thi đấu Bán kết trận 1
     m1 = detail.rounds[0].matches[0]
@@ -155,7 +155,7 @@ def test_registration_approval_flow(db_session):
 
 
     # Bắt đầu giải đấu với 4 người đã duyệt
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     assert detail.tournament.status == "IN_PROGRESS"
     assert len(detail.participants) == 5
     # Các trận vòng 1 được tạo ở trạng thái READY với thời hạn 10 phút
@@ -175,7 +175,7 @@ def test_match_checkin_and_single_forfeit(db_session):
     for u in users:
         TournamentService.register_participant(db_session, t.id, u, auto_accept=True)
 
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     match1 = detail.rounds[0].matches[0]
     p1 = db_session.query(User).filter(User.id == match1.player1_id).first()
     p2 = db_session.query(User).filter(User.id == match1.player2_id).first()
@@ -217,7 +217,7 @@ def test_match_double_forfeit_and_champion(db_session):
     for u in users:
         TournamentService.register_participant(db_session, t.id, u, auto_accept=True)
 
-    detail = TournamentService.start_tournament(db_session, t.id, creator)
+    detail = TournamentService.start_tournament(db_session, t.id, creator, auto_publish=True)
     m1 = detail.rounds[0].matches[0]
     m2 = detail.rounds[0].matches[1]
 

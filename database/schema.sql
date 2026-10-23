@@ -77,3 +77,18 @@ CREATE TABLE games (
     FOREIGN KEY (team_red_id) REFERENCES teams(id),
     FOREIGN KEY (team_blue_id) REFERENCES teams(id)
 );
+
+CREATE TABLE tournament_maps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tournament_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    size INT NOT NULL DEFAULT 5, -- 4, 5, 6
+    rocks_json TEXT, -- JSON list [[r, c], ...]
+    creator_id INT NOT NULL,
+    version INT DEFAULT 1,
+    is_valid BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+);
+

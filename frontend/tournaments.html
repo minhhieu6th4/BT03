@@ -162,7 +162,13 @@
                     tbody.innerHTML = data.map(t => {
                         let statusBadge = 'badge-waiting';
                         let statusText = t.status;
-                        if (t.status === 'IN_PROGRESS') {
+                        if (t.status === 'SETTING_UP') {
+                            statusBadge = 'badge-waiting';
+                            statusText = 'Đang Thiết Lập';
+                        } else if (t.status === 'PUBLISHED') {
+                            statusBadge = 'badge-ready';
+                            statusText = 'Đã Công Bố Lịch';
+                        } else if (t.status === 'IN_PROGRESS') {
                             statusBadge = 'badge-playing';
                             statusText = 'Đang Thi Đấu';
                         } else if (t.status === 'COMPLETED') {

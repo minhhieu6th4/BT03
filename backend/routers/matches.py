@@ -45,6 +45,7 @@ def get_match_replay(match_id: int, db: Session = Depends(get_db)):
 
     initial_board = json.loads(match.initial_board_json) if match.initial_board_json else []
     moves = json.loads(match.moves_json) if match.moves_json else []
+    board_size = len(initial_board) if initial_board else 9
 
     return {
         "match_id": match.id,
@@ -57,8 +58,10 @@ def get_match_replay(match_id: int, db: Session = Depends(get_db)):
         "is_draw": match.is_draw,
         "reason": match.termination_reason,
         "total_turns": match.total_turns,
+        "board_size": board_size,
         "initial_board": initial_board,
         "moves": moves
     }
+
 
 

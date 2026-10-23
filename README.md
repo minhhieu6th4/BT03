@@ -31,19 +31,28 @@
 - Điểm số cộng trực tiếp vào **Bảng Xếp Hạng Toàn Server**:
   - **Thắng**: `+3 điểm` | **Hòa**: `+1 điểm` | **Thua**: `+0 điểm`.
 
-### 4. 🏆 Hệ Thống Giải Đấu Knockout (Loại Trực Tiếp)
-- **Tổ chức & Duyệt đăng ký**:
-  - Người tổ chức tạo giải đấu (cấu hình số lượng tối thiểu $\ge 4$ và tối đa).
-  - Người chơi gửi yêu cầu đăng ký kèm theo Bot có trạng thái `READY`.
-  - Người tổ chức xét duyệt (`ACCEPTED` / `REJECTED`) với cơ chế khóa dữ liệu chống vượt quá giới hạn.
-- **Thuật toán chia nhánh tổng quát ($N \ge 4$)**:
-  - Hỗ trợ mọi số lượng người chơi hợp lệ (kể cả số lẻ hoặc không phải lũy thừa của 2 như 5, 6, 7, 9, 12...).
-  - Tự động tính khung nhánh $2^k$ gần nhất và phân bổ ngẫu nhiên các suất miễn đấu (**`BYE`**) ở vòng đầu tiên để người chơi đặc cách tiến thẳng vào vòng trong.
+### 4. 🏆 Hệ Thống Giải Đấu Knockout & Quy Trình Tổ Chức 2 Giai Đoạn
+- **Quy trình tổ chức 2 giai đoạn (Two-Stage Private Draft & Publish)**:
+  - **Giai đoạn 1 — Bản nháp riêng tư (`SETTING_UP`)**: Khi Host nhấn "Bắt Đầu Thiết Lập", hệ thống tự động chốt danh sách duyệt, tính nhánh đấu Knockout và lưu vào cơ sở dữ liệu. Nhánh đấu được **giữ bí mật hoàn toàn** (thí sinh và khán giả chỉ thấy thông báo đang thiết lập, không thể xem trước cặp đấu qua API hay frontend).
+  - **Giai đoạn 2 — Cấu hình Map & Lịch đấu riêng cho từng trận**: Host có thể nhấn vào từng trận đấu trong nhánh để chọn bản đồ riêng (`map_id`) và lịch thi đấu dự kiến (`scheduled_at`).
+  - **Giai đoạn 3 — Tổng quan thiết lập & Công bố chính thức (`PUBLISHED`)**: Giao diện tổng quan (`Setup Overview`) kiểm tra tự động điều kiện: toàn bộ các trận đấu vòng 1 (không phải `BYE`) đều đã có Map và Lịch thi đấu hợp lệ trước khi Host được phép nhấn **Công Bố Lịch Đấu**.
+  - **Giai đoạn 4 — Quy tắc bảo mật bản đồ bắt buộc 24 giờ**: Bản đồ của mỗi trận đấu được **bảo mật tuyệt đối** và chỉ tự động công bố trước giờ thi đấu **24 giờ** (`map_reveal_at = scheduled_at - 24h` hoặc mở ngay nếu lịch đấu dưới 24h). Trước thời điểm này, backend áp dụng mã lỗi `403 Forbidden` (kèm thời gian công bố) và ẩn hoàn toàn vị trí đá cản trong response trận đấu (`rocks: null, is_map_revealed: false`). Chỉ Host/Admin mới có quyền xem trước.
+- **Bản đồ tùy chỉnh (Custom Maps) & Ô đá cản (`🪨`)**:
+  - Hỗ trợ **6 kích thước bàn cờ**: **`4×4, 5×5, 6×6, 9×9, 15×15, 18×18`**.
+  - **Quy tắc phân bổ quân cờ theo kích thước**:
+    - **Bàn cờ 4×4, 5×5, 6×6**: Mỗi bên chỉ có **3 quân cờ** (1 Búa 🪨, 1 Kéo ✂️, 1 Giấy/Bao 📄).
+    - **Các bàn cờ còn lại (9×9, 15×15, 18×18)**: Mỗi bên có **6 quân cờ** (2 Búa 🪨, 2 Kéo ✂️, 2 Giấy/Bao 📄).
+  - Công cụ thiết kế trực quan: đặt/xóa đá cản, kiểm tra tính hợp lệ tự động (Map Validator).
+  - Quy tắc xác thực chặt chẽ tại Backend:
+    - Số lượng đá cản $\le \lfloor \text{size}^2 / 3 \rfloor$.
+    - Bảo vệ tuyệt đối vị trí xuất phát quân cờ và căn cứ của cả 2 phe (`reserved positions`).
+    - Thuật toán **BFS Pathfinding** kiểm tra tính thông suốt giữa 2 căn cứ, cấm tuyệt đối chia cắt bàn cờ hoặc bẫy quân cờ.
+    - Game engine tích hợp vật cản vào ma trận di chuyển; Bot đi vào ô đá sẽ bị xử lý là nước đi không hợp lệ.
 - **Điểm danh 10 phút & Xử thua vắng mặt (`FORFEIT`)**:
-  - Khi trận đấu mở (`READY`), hai tuyển thủ có **10 phút** để nhấn **"Tham gia trận đấu"**.
-  - Khi cả 2 cùng tham gia, hệ thống tự động kích hoạt trận đấu. Nếu quá hạn 10 phút, người vắng mặt sẽ bị xử thua `FORFEIT`.
+  - Khi trận đấu mở (`READY`), hai tuyển thủ có **10 phút** để nhấn **"Tham gia thi đấu"**.
+  - Khi cả 2 cùng tham gia, trận đấu tự động kích hoạt. Nếu quá hạn 10 phút, người vắng mặt sẽ bị xử thua `FORFEIT`.
 - **Bàn cờ trực quan (Interactive Battle Arena)**:
-  - Khi trận đấu diễn ra, giao diện hiển thị bàn cờ 9x9 trực quan tái hiện từng nước đi của hai Bot (hỗ trợ tua bước, dừng/chạy, chỉnh tốc độ `0.5x` – `4x`).
+  - Khi trận đấu diễn ra, giao diện hiển thị bàn cờ trực quan tái hiện từng nước đi của hai Bot (hỗ trợ tua bước, dừng/chạy, chỉnh tốc độ `0.5x` – `4x`).
   - **Bảo mật kịch tính**: Kết quả và danh tính người chiến thắng được ẩn hoàn toàn trong suốt quá trình quân cờ di chuyển và **chỉ công bố chính thức khi nước đi cuối cùng kết thúc**.
 
 ### 5. 🌐 Hỗ Trợ Đa Tab (Multi-Account) & Mạng LAN/Wi-Fi
@@ -94,7 +103,7 @@ UET-Algorithm-Battle/
 │   ├── sandbox.py            # Môi trường cô lập thực thi Bot
 │   ├── match_runner.py       # Điều phối trận đấu giữa 2 Bot
 │   └── Dockerfile            # Cấu hình Docker image cô lập cho Bot
-├── tests/                    # Bộ 62 Unit & Integration Tests (Pytest)
+├── tests/                    # Bộ 78 Unit & Integration Tests (Pytest)
 ├── tournament/               # Các thuật toán chia bảng, xếp hạt giống và quản lý luật giải đấu
 ├── docker-compose.yml        # Khởi tạo nhanh MySQL 8.0 bằng Docker
 ├── init_db.py                # Script tạo bảng Database thủ công
@@ -198,7 +207,7 @@ class Bot:
 
 ## 🧪 Kiểm Thử Tự Động (Unit & Integration Tests)
 
-Dự án đi kèm bộ **62 bài kiểm thử tự động** bao phủ toàn bộ Game Engine, Bot Validator, Sandbox, Phòng đấu PvP, Bảng xếp hạng và Giải đấu Knockout (bao gồm xử lý BYE, duyệt đơn, điểm danh và xử thua `FORFEIT`).
+Dự án đi kèm bộ **78 bài kiểm thử tự động** bao phủ toàn bộ Game Engine, Bot Validator, Sandbox, Phòng đấu PvP, Bảng xếp hạng và Hệ thống Knockout (bao gồm chia nhánh BYE, bản đồ tùy chỉnh 6 kích thước 4x4 -> 18x18, quy tắc số quân cờ theo kích thước, quy tắc bảo mật 24 giờ và quy trình bản nháp 2 giai đoạn).
 
 Chạy toàn bộ kiểm thử bằng lệnh:
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database.base import Base
@@ -12,7 +12,10 @@ class Tournament(Base):
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     min_participants = Column(Integer, default=4, nullable=False)
     max_participants = Column(Integer, default=32, nullable=False)
-    status = Column(String(20), default="REGISTRATION_OPEN", nullable=False) # REGISTRATION_OPEN, IN_PROGRESS, COMPLETED, CANCELLED
+    max_concurrent_matches = Column(Integer, default=4, nullable=False)
+    status = Column(String(20), default="REGISTRATION_OPEN", nullable=False) # REGISTRATION_OPEN, SETTING_UP, PUBLISHED, IN_PROGRESS, COMPLETED, CANCELLED
+    setup_started_at = Column(DateTime, nullable=True)
+    published_at = Column(DateTime, nullable=True)
     champion_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -20,6 +23,25 @@ class Tournament(Base):
     champion = relationship("User", foreign_keys=[champion_id])
     participants = relationship("TournamentParticipant", back_populates="tournament", cascade="all, delete-orphan")
     rounds = relationship("TournamentRound", back_populates="tournament", cascade="all, delete-orphan", order_by="TournamentRound.round_number")
+    maps = relationship("TournamentMap", back_populates="tournament", cascade="all, delete-orphan")
+
+
+class TournamentMap(Base):
+    __tablename__ = "tournament_maps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tournament_id = Column(Integer, ForeignKey("tournaments.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    size = Column(Integer, nullable=False, default=5) # 4, 5, 6 (or 9)
+    rocks_json = Column(Text, default="[]") # JSON list [[r, c], ...]
+    creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    version = Column(Integer, default=1)
+    is_valid = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    tournament = relationship("Tournament", back_populates="maps")
+    creator = relationship("User", foreign_keys=[creator_id])
 
 
 class TournamentParticipant(Base):
@@ -49,9 +71,12 @@ class TournamentRound(Base):
     round_number = Column(Integer, nullable=False) # 1, 2, 3...
     round_name = Column(String(50), nullable=False) # Vòng 1, Tứ kết, Bán kết, Chung kết
     status = Column(String(20), default="PENDING", nullable=False) # PENDING, IN_PROGRESS, COMPLETED
+    map_id = Column(Integer, ForeignKey("tournament_maps.id", ondelete="SET NULL"), nullable=True)
+    map_announced_at = Column(DateTime, nullable=True)
 
     tournament = relationship("Tournament", back_populates="rounds")
     matches = relationship("TournamentMatch", back_populates="round", cascade="all, delete-orphan", order_by="TournamentMatch.match_order")
+    map = relationship("TournamentMap", foreign_keys=[map_id])
 
 
 class TournamentMatch(Base):
@@ -69,6 +94,14 @@ class TournamentMatch(Base):
     is_bye = Column(Boolean, default=False, nullable=False)
     status = Column(String(20), default="WAITING", nullable=False) # WAITING, READY, PLAYING, COMPLETED, FORFEIT, CANCELLED
     match_id = Column(Integer, ForeignKey("matches.id", ondelete="SET NULL"), nullable=True)
+    map_id = Column(Integer, ForeignKey("tournament_maps.id", ondelete="SET NULL"), nullable=True)
+
+    # Schedule & Concurrency
+    scheduled_at = Column(DateTime, nullable=True)
+    check_in_opens_at = Column(DateTime, nullable=True)
+    map_reveal_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
 
     # 10-Minute Participation Deadline & Check-in
     ready_at = Column(DateTime, nullable=True)
@@ -84,4 +117,6 @@ class TournamentMatch(Base):
     player2_bot = relationship("Bot", foreign_keys=[player2_bot_id])
     winner = relationship("User", foreign_keys=[winner_id])
     match = relationship("Match")
+    map = relationship("TournamentMap", foreign_keys=[map_id])
+
 

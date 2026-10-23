@@ -7,13 +7,16 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
-from backend.models.tournament import Tournament, TournamentParticipant, TournamentRound, TournamentMatch
+from backend.models.tournament import Tournament, TournamentParticipant, TournamentRound, TournamentMatch, TournamentMap
 from backend.models.user import User
 from backend.models.bot import Bot, BotVersion
 from backend.models.match import Match
 from backend.schemas.tournament import (
     TournamentResponse, TournamentDetailResponse, TournamentParticipantResponse,
-    TournamentRoundResponse, TournamentMatchResponse
+    TournamentRoundResponse, TournamentMatchResponse,
+    TournamentMapCreate, TournamentMapUpdate, TournamentMapResponse,
+    TournamentScheduleCreate,
+    MatchConfigUpdateRequest, SetupOverviewMatch, SetupOverviewResponse
 )
 
 
@@ -38,12 +41,15 @@ class TournamentService:
             creator_name=t.creator.username if t.creator else None,
             min_participants=getattr(t, "min_participants", 4) or 4,
             max_participants=getattr(t, "max_participants", 32) or 32,
+            max_concurrent_matches=getattr(t, "max_concurrent_matches", 4) or 4,
             status=t.status,
             participant_count=accepted_count if t.status not in ["REGISTRATION", "REGISTRATION_OPEN"] else p_count,
             accepted_count=accepted_count,
             pending_count=pending_count,
             champion_id=t.champion_id,
             champion_name=t.champion.username if t.champion else None,
+            setup_started_at=getattr(t, "setup_started_at", None),
+            published_at=getattr(t, "published_at", None),
             created_at=t.created_at
         )
 
@@ -81,13 +87,13 @@ class TournamentService:
         return [TournamentService._to_response(db, t) for t in tournaments]
 
     @staticmethod
-    def get_tournament_detail(db: Session, tournament_id: int) -> TournamentDetailResponse:
+    def get_tournament_detail(db: Session, tournament_id: int, current_user: Optional[User] = None) -> TournamentDetailResponse:
         t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
         if not t:
             raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
 
-        # Kiểm tra và xử lý tự động các trận đấu quá hạn 10 phút (idempotent deadline sweeper)
-        TournamentService.check_tournament_deadlines(db, tournament_id)
+        # Kích hoạt Scheduler Tick kiểm tra lịch trình, thời hạn 10 phút và hàng đợi chạy bot
+        TournamentService.run_scheduler_tick(db, tournament_id)
 
         participants_db = (
             db.query(TournamentParticipant)
@@ -118,61 +124,160 @@ class TournamentService:
         )
         rounds = []
         now = datetime.utcnow()
-        for r in rounds_db:
-            matches_db = (
-                db.query(TournamentMatch)
-                .filter(TournamentMatch.round_id == r.id)
-                .order_by(TournamentMatch.match_order.asc())
-                .all()
-            )
-            matches = []
-            for m in matches_db:
-                seconds_remaining = None
-                if m.status == "READY" and m.participation_deadline:
-                    rem = int((m.participation_deadline - now).total_seconds())
-                    seconds_remaining = max(0, rem)
+        is_host_or_admin = current_user and (current_user.id == t.creator_id or getattr(current_user, "is_admin", False))
 
-                matches.append(
-                    TournamentMatchResponse(
-                        id=m.id,
-                        round_id=m.round_id,
-                        match_order=m.match_order,
-                        player1_id=m.player1_id,
-                        player1_name=m.player1.username if m.player1 else None,
-                        player1_bot_id=m.player1_bot_id,
-                        player1_bot_name=m.player1_bot.name if m.player1_bot else None,
-                        player1_joined_at=m.player1_joined_at,
-                        player2_id=m.player2_id,
-                        player2_name=m.player2.username if m.player2 else None,
-                        player2_bot_id=m.player2_bot_id,
-                        player2_bot_name=m.player2_bot.name if m.player2_bot else None,
-                        player2_joined_at=m.player2_joined_at,
-                        winner_id=m.winner_id,
-                        winner_name=m.winner.username if m.winner else None,
-                        is_bye=m.is_bye,
-                        status=m.status,
-                        ready_at=m.ready_at,
-                        participation_deadline=m.participation_deadline,
-                        seconds_remaining=seconds_remaining,
-                        result_reason=m.result_reason,
-                        match_id=m.match_id
+        # Giai đoạn SETTING_UP: Chỉ Host/Admin mới có quyền xem nhánh đấu chưa công bố!
+        if t.status != "SETTING_UP" or is_host_or_admin:
+            for r in rounds_db:
+                matches_db = (
+                    db.query(TournamentMatch)
+                    .filter(TournamentMatch.round_id == r.id)
+                    .order_by(TournamentMatch.match_order.asc())
+                    .all()
+                )
+                matches = []
+                for m in matches_db:
+                    seconds_remaining = None
+                    if m.status == "READY" and m.participation_deadline:
+                        rem = int((m.participation_deadline - now).total_seconds())
+                        seconds_remaining = max(0, rem)
+
+                    match_map = m.map or r.map
+                    reveal_at = m.map_reveal_at or (m.scheduled_at - timedelta(hours=24) if m.scheduled_at else None)
+
+                    is_map_revealed = False
+                    match_rocks = None
+                    if match_map:
+                        if is_host_or_admin:
+                            is_map_revealed = True
+                        elif reveal_at and now >= reveal_at:
+                            is_map_revealed = True
+                        elif not m.scheduled_at and r.map_announced_at and now >= r.map_announced_at:
+                            is_map_revealed = True
+
+                        if is_map_revealed:
+                            try:
+                                match_rocks = json.loads(match_map.rocks_json or "[]")
+                            except Exception:
+                                match_rocks = []
+
+                    is_configured = bool(m.is_bye or (m.map_id and m.scheduled_at))
+
+                    matches.append(
+                        TournamentMatchResponse(
+                            id=m.id,
+                            round_id=m.round_id,
+                            match_order=m.match_order,
+                            player1_id=m.player1_id,
+                            player1_name=m.player1.username if m.player1 else None,
+                            player1_bot_id=m.player1_bot_id,
+                            player1_bot_name=m.player1_bot.name if m.player1_bot else None,
+                            player1_joined_at=m.player1_joined_at,
+                            player2_id=m.player2_id,
+                            player2_name=m.player2.username if m.player2 else None,
+                            player2_bot_id=m.player2_bot_id,
+                            player2_bot_name=m.player2_bot.name if m.player2_bot else None,
+                            player2_joined_at=m.player2_joined_at,
+                            winner_id=m.winner_id,
+                            winner_name=m.winner.username if m.winner else None,
+                            is_bye=m.is_bye,
+                            status=m.status,
+                            map_id=m.map_id or r.map_id,
+                            map_name=match_map.name if match_map else None,
+                            map_size=match_map.size if match_map else 9,
+                            map_reveal_at=reveal_at,
+                            is_map_revealed=is_map_revealed,
+                            rocks=match_rocks,
+                            scheduled_at=m.scheduled_at,
+                            check_in_opens_at=m.check_in_opens_at,
+                            started_at=m.started_at,
+                            completed_at=m.completed_at,
+                            ready_at=m.ready_at,
+                            participation_deadline=m.participation_deadline,
+                            seconds_remaining=seconds_remaining,
+                            result_reason=m.result_reason,
+                            match_id=m.match_id,
+                            is_configured=is_configured
+                        )
+                    )
+
+                # Xử lý quy tắc công bố Map theo vòng do Host cấu hình:
+                map_obj = r.map
+                is_map_announced = False
+                rocks_disclosed = None
+                if map_obj:
+                    if r.map_announced_at is None or now >= r.map_announced_at or is_host_or_admin:
+                        is_map_announced = True
+                        try:
+                            rocks_disclosed = json.loads(map_obj.rocks_json or "[]")
+                        except Exception:
+                            rocks_disclosed = []
+                    else:
+                        is_map_announced = False
+                        rocks_disclosed = None
+
+                rounds.append(
+                    TournamentRoundResponse(
+                        id=r.id,
+                        round_number=r.round_number,
+                        round_name=r.round_name,
+                        status=r.status,
+                        map_id=r.map_id,
+                        map_name=map_obj.name if map_obj else None,
+                        map_size=map_obj.size if map_obj else 9,
+                        map_announced_at=r.map_announced_at,
+                        is_map_announced=is_map_announced,
+                        rocks=rocks_disclosed,
+                        matches=matches
                     )
                 )
-            rounds.append(
-                TournamentRoundResponse(
-                    id=r.id,
-                    round_number=r.round_number,
-                    round_name=r.round_name,
-                    status=r.status,
-                    matches=matches
+
+        # Lấy danh sách map của giải đấu
+        maps_db = db.query(TournamentMap).filter(TournamentMap.tournament_id == t.id).order_by(TournamentMap.id.asc()).all()
+        maps_response = []
+        for m_item in maps_db:
+            try:
+                r_list = json.loads(m_item.rocks_json or "[]")
+            except Exception:
+                r_list = []
+
+            # Bảo mật tọa độ đá đối với thí sinh nếu map chưa đến giờ công bố
+            if not is_host_or_admin:
+                has_revealed_match = db.query(TournamentMatch).filter(
+                    TournamentMatch.tournament_id == t.id,
+                    TournamentMatch.map_id == m_item.id,
+                    TournamentMatch.map_reveal_at <= now
+                ).first() is not None
+                has_revealed_round = db.query(TournamentRound).filter(
+                    TournamentRound.tournament_id == t.id,
+                    TournamentRound.map_id == m_item.id,
+                    TournamentRound.map_announced_at <= now
+                ).first() is not None
+                if not has_revealed_match and not has_revealed_round:
+                    r_list = []
+
+            maps_response.append(
+                TournamentMapResponse(
+                    id=m_item.id,
+                    tournament_id=m_item.tournament_id,
+                    name=m_item.name,
+                    size=m_item.size,
+                    rocks=r_list,
+                    version=m_item.version,
+                    is_valid=m_item.is_valid,
+                    creator_id=m_item.creator_id,
+                    created_at=m_item.created_at,
+                    updated_at=m_item.updated_at
                 )
             )
 
         return TournamentDetailResponse(
             tournament=TournamentService._to_response(db, t),
             participants=participants,
-            rounds=rounds
+            rounds=rounds,
+            maps=maps_response
         )
+
 
     @staticmethod
     def register_participant(db: Session, tournament_id: int, user: User, bot_id: Optional[int] = None, auto_accept: bool = False):
@@ -329,16 +434,14 @@ class TournamentService:
         ]
 
     @staticmethod
-    def start_tournament(db: Session, tournament_id: int, user: User) -> TournamentDetailResponse:
+    def start_tournament(db: Session, tournament_id: int, user: User, auto_publish: bool = False) -> TournamentDetailResponse:
         """
-        Khởi động giải đấu Knockout:
+        Khởi động giai đoạn thiết lập giải đấu Knockout:
         - Kiểm tra người có quyền tổ chức (Chủ giải hoặc Admin).
-        - Đóng đăng ký, chuyển trạng thái sang IN_PROGRESS.
-        - Lấy danh sách tuyển thủ đã được ACCEPTED (tự động fallback duyệt nếu chưa qua bước duyệt thủ công).
         - Kiểm tra tối thiểu min_participants (>= 4).
-        - Xáo trộn ngẫu nhiên danh sách người chơi.
-        - Thuật toán tổng quát phân bổ đặc cách BYE cho mọi số lượng tuyển thủ N >= 4.
-        - Thiết lập hạn chót 10 phút (participation_deadline) cho các cặp đấu thật ở Vòng 1.
+        - Xáo trộn ngẫu nhiên danh sách người chơi và tính toán nhánh đấu Knockout.
+        - Chuyển trạng thái sang SETTING_UP (giải đấu riêng tư, thí sinh chưa thấy nhánh đấu).
+        - Nếu auto_publish=True (hoặc chế độ publish): kích hoạt IN_PROGRESS và thời hạn 10 phút.
         """
         t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
         if not t:
@@ -412,7 +515,7 @@ class TournamentService:
                 tournament_id=t.id,
                 round_number=r_num,
                 round_name=r_name,
-                status="IN_PROGRESS" if r_num == 1 else "PENDING"
+                status="IN_PROGRESS" if (r_num == 1 and auto_publish) else "PENDING"
             )
             db.add(round_obj)
             db.flush()
@@ -444,7 +547,7 @@ class TournamentService:
             round_1_matches.append(m)
             current_match_order += 1
 
-        # Cặp thi đấu thật ở vòng 1: Thiết lập thời hạn 10 phút tham gia
+        # Cặp thi đấu thật ở vòng 1
         for i in range(0, len(non_bye_participants), 2):
             p1 = non_bye_participants[i]
             p2 = non_bye_participants[i+1] if (i+1) < len(non_bye_participants) else None
@@ -459,9 +562,9 @@ class TournamentService:
                 player2_bot_id=p2.bot_id if p2 else None,
                 winner_id=p1.user_id if is_bye_match else None,
                 is_bye=is_bye_match,
-                status="COMPLETED" if is_bye_match else "READY",
-                ready_at=None if is_bye_match else now,
-                participation_deadline=None if is_bye_match else deadline_10m,
+                status="COMPLETED" if is_bye_match else ("READY" if auto_publish else "WAITING"),
+                ready_at=now if (auto_publish and not is_bye_match) else None,
+                participation_deadline=deadline_10m if (auto_publish and not is_bye_match) else None,
                 result_reason="BYE" if is_bye_match else None
             )
             db.add(m)
@@ -498,9 +601,12 @@ class TournamentService:
                     db, m, 1, total_rounds, all_rounds_matches
                 )
 
-        t.status = "IN_PROGRESS"
+        t.status = "IN_PROGRESS" if auto_publish else "SETTING_UP"
+        t.setup_started_at = now
+        if auto_publish:
+            t.published_at = now
         db.commit()
-        return TournamentService.get_tournament_detail(db, t.id)
+        return TournamentService.get_tournament_detail(db, t.id, current_user=user)
 
     @staticmethod
     def _propagate_winner_to_next_round(
@@ -630,11 +736,28 @@ class TournamentService:
         db.commit()
         db.refresh(m)
 
-        # Nếu cả 2 người chơi cùng điểm danh thành công -> Bắt đầu thi đấu ngay lập tức!
+        # Nếu cả 2 người chơi cùng điểm danh thành công
         if m.player1_joined_at and m.player2_joined_at:
-            m.status = "PLAYING"
-            db.commit()
-            TournamentService._execute_tournament_match(db, m)
+            t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+            max_concurrent = getattr(t, "max_concurrent_matches", 4) or 4
+            running_count = (
+                db.query(TournamentMatch)
+                .filter(TournamentMatch.tournament_id == tournament_id, TournamentMatch.status == "PLAYING")
+                .count()
+            )
+
+            # Nếu có lịch và chưa đến giờ khởi tranh: tiếp tục chờ
+            if m.scheduled_at and now < m.scheduled_at:
+                pass
+            elif running_count < max_concurrent:
+                # Đủ điều kiện và còn slot: thi đấu ngay lập tức
+                m.status = "PLAYING"
+                m.started_at = now
+                db.commit()
+                TournamentService._execute_tournament_match(db, m)
+            else:
+                # Đang hết slot chạy đồng thời: chờ Scheduler tick tự động kích hoạt khi có trận kết thúc
+                pass
 
         return TournamentService.get_match_detail(db, tournament_id, match_id)
 
@@ -664,7 +787,28 @@ class TournamentService:
         if not blue_file or not os.path.exists(blue_file):
             blue_file = "bots/examples/random_bot.py" if os.path.exists("bots/examples/random_bot.py") else None
 
-        engine = GameEngine(RuleSet.default())
+        # Tải cấu hình Map tùy chỉnh (nếu có gán cho trận hoặc vòng đấu)
+        map_obj = m.map
+        if not map_obj and m.round_id:
+            r = db.query(TournamentRound).filter(TournamentRound.id == m.round_id).first()
+            if r and r.map_id:
+                map_obj = db.query(TournamentMap).filter(TournamentMap.id == r.map_id).first()
+                if map_obj:
+                    m.map_id = map_obj.id
+
+        if map_obj:
+            try:
+                rocks = json.loads(map_obj.rocks_json or "[]")
+            except Exception:
+                rocks = []
+            rule_set = RuleSet({"board_size": map_obj.size, "rocks": rocks})
+        else:
+            rule_set = RuleSet.default()
+
+        if not m.started_at:
+            m.started_at = datetime.utcnow()
+
+        engine = GameEngine(rule_set)
         initial_board = engine.state.to_dict()["board"]
         moves_log = []
         winner_user_id = None
@@ -673,6 +817,7 @@ class TournamentService:
 
         wrapper_red = None
         wrapper_blue = None
+
 
         try:
             if red_file and blue_file:
@@ -945,6 +1090,8 @@ class TournamentService:
             rem = int((m.participation_deadline - datetime.utcnow()).total_seconds())
             seconds_remaining = max(0, rem)
 
+        match_map = m.map or (m.round.map if m.round else None)
+
         return TournamentMatchResponse(
             id=m.id,
             round_id=m.round_id,
@@ -963,9 +1110,687 @@ class TournamentService:
             winner_name=m.winner.username if m.winner else None,
             is_bye=m.is_bye,
             status=m.status,
+            map_id=m.map_id or (m.round.map_id if m.round else None),
+            map_size=match_map.size if match_map else 9,
+            scheduled_at=m.scheduled_at,
+            check_in_opens_at=m.check_in_opens_at,
+            started_at=m.started_at,
+            completed_at=m.completed_at,
             ready_at=m.ready_at,
             participation_deadline=m.participation_deadline,
             seconds_remaining=seconds_remaining,
             result_reason=m.result_reason,
             match_id=m.match_id
         )
+
+    @staticmethod
+    def validate_map_candidate(size: int, rocks: List[List[int]]) -> dict:
+        from game.map_validator import validate_custom_map
+        is_valid, msg = validate_custom_map(size, rocks)
+        return {"valid": is_valid, "message": msg, "size": size, "rock_count": len(rocks)}
+
+    @staticmethod
+    def create_map(db: Session, tournament_id: int, user: User, data: TournamentMapCreate) -> TournamentMapResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải hoặc Admin mới có quyền tạo map")
+
+        from game.map_validator import validate_custom_map
+        is_valid, msg = validate_custom_map(data.size, data.rocks)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=msg)
+
+        m = TournamentMap(
+            tournament_id=t.id,
+            name=data.name.strip(),
+            size=data.size,
+            rocks_json=json.dumps(data.rocks),
+            creator_id=user.id,
+            version=1,
+            is_valid=True
+        )
+        db.add(m)
+        db.commit()
+        db.refresh(m)
+        return TournamentMapResponse(
+            id=m.id,
+            tournament_id=m.tournament_id,
+            name=m.name,
+            size=m.size,
+            rocks=data.rocks,
+            version=m.version,
+            is_valid=m.is_valid,
+            creator_id=m.creator_id,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+
+    @staticmethod
+    def update_map(db: Session, tournament_id: int, map_id: int, user: User, data: TournamentMapUpdate) -> TournamentMapResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải hoặc Admin mới có quyền sửa map")
+
+        m = db.query(TournamentMap).filter(TournamentMap.id == map_id, TournamentMap.tournament_id == t.id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Không tìm thấy map")
+
+        # Kiểm tra xem map đã được sử dụng bởi trận đấu đã hoặc đang diễn ra chưa
+        in_use = db.query(TournamentMatch).filter(
+            TournamentMatch.map_id == m.id,
+            TournamentMatch.status.in_(["PLAYING", "COMPLETED"])
+        ).count()
+        if in_use > 0:
+            raise HTTPException(status_code=400, detail="Map đang hoặc đã được sử dụng bởi trận đấu, không được sửa trực tiếp. Vui lòng tạo phiên bản map mới!")
+
+        if data.rocks is not None:
+            from game.map_validator import validate_custom_map
+            is_valid, msg = validate_custom_map(m.size, data.rocks)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=msg)
+            m.rocks_json = json.dumps(data.rocks)
+            m.version += 1
+
+        if data.name is not None and data.name.strip():
+            m.name = data.name.strip()
+
+        db.commit()
+        db.refresh(m)
+        try:
+            r_list = json.loads(m.rocks_json or "[]")
+        except Exception:
+            r_list = []
+        return TournamentMapResponse(
+            id=m.id,
+            tournament_id=m.tournament_id,
+            name=m.name,
+            size=m.size,
+            rocks=r_list,
+            version=m.version,
+            is_valid=m.is_valid,
+            creator_id=m.creator_id,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+
+    @staticmethod
+    def delete_map(db: Session, tournament_id: int, map_id: int, user: User):
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải mới có quyền xóa map")
+
+        m = db.query(TournamentMap).filter(TournamentMap.id == map_id, TournamentMap.tournament_id == t.id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Không tìm thấy map")
+
+        rounds_assigned = db.query(TournamentRound).filter(TournamentRound.map_id == m.id).count()
+        if rounds_assigned > 0:
+            raise HTTPException(status_code=400, detail="Map đang được gán cho vòng đấu, vui lòng gỡ map trước khi xóa")
+
+        db.delete(m)
+        db.commit()
+        return {"message": "Đã xóa map thành công"}
+
+    @staticmethod
+    def list_maps(db: Session, tournament_id: int) -> List[TournamentMapResponse]:
+        maps_db = db.query(TournamentMap).filter(TournamentMap.tournament_id == tournament_id).order_by(TournamentMap.id.asc()).all()
+        res = []
+        for m in maps_db:
+            try:
+                r_list = json.loads(m.rocks_json or "[]")
+            except Exception:
+                r_list = []
+            res.append(
+                TournamentMapResponse(
+                    id=m.id,
+                    tournament_id=m.tournament_id,
+                    name=m.name,
+                    size=m.size,
+                    rocks=r_list,
+                    version=m.version,
+                    is_valid=m.is_valid,
+                    creator_id=m.creator_id,
+                    created_at=m.created_at,
+                    updated_at=m.updated_at
+                )
+            )
+        return res
+
+    @staticmethod
+    def get_map(db: Session, tournament_id: int, map_id: int, user: Optional[User] = None) -> TournamentMapResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+
+        m = db.query(TournamentMap).filter(TournamentMap.id == map_id, TournamentMap.tournament_id == t.id).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Không tìm thấy map")
+
+        is_host_or_admin = user and (user.id == t.creator_id or getattr(user, "is_admin", False))
+        assigned_rounds = db.query(TournamentRound).filter(TournamentRound.map_id == m.id, TournamentRound.tournament_id == t.id).all()
+        assigned_matches = db.query(TournamentMatch).filter(TournamentMatch.map_id == m.id, TournamentMatch.tournament_id == t.id).all()
+        now = datetime.utcnow()
+
+        # Nếu map được gán cho trận đấu hoặc vòng đấu, kiểm tra thời điểm công bố
+        should_disclose = True
+        if not is_host_or_admin:
+            if assigned_matches or assigned_rounds:
+                round_disclosed = any(r.map_announced_at is None or now >= r.map_announced_at for r in assigned_rounds) if assigned_rounds else False
+                match_disclosed = False
+                for mat in assigned_matches:
+                    rev_at = mat.map_reveal_at or (mat.scheduled_at - timedelta(hours=24) if mat.scheduled_at else None)
+                    if rev_at is not None and now >= rev_at:
+                        match_disclosed = True
+                        break
+
+                if not round_disclosed and not match_disclosed:
+                    should_disclose = False
+                    candidates = []
+                    for r in assigned_rounds:
+                        if r.map_announced_at: candidates.append(r.map_announced_at)
+                    for mat in assigned_matches:
+                        rev_at = mat.map_reveal_at or (mat.scheduled_at - timedelta(hours=24) if mat.scheduled_at else None)
+                        if rev_at: candidates.append(rev_at)
+                    earliest_announcement = min(candidates) if candidates else None
+                    detail_msg = f"Map này đang được bảo mật và sẽ được công bố chính thức vào lúc: {earliest_announcement.isoformat()}" if earliest_announcement else "Map này đang được bảo mật và chưa được công bố."
+                    raise HTTPException(
+                        status_code=403,
+                        detail=detail_msg
+                    )
+
+        try:
+            r_list = json.loads(m.rocks_json or "[]")
+        except Exception:
+            r_list = []
+
+        return TournamentMapResponse(
+            id=m.id,
+            tournament_id=m.tournament_id,
+            name=m.name,
+            size=m.size,
+            rocks=r_list,
+            version=m.version,
+            is_valid=m.is_valid,
+            creator_id=m.creator_id,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+
+    @staticmethod
+    def assign_round_map(
+        db: Session,
+        tournament_id: int,
+        round_id: int,
+        user: User,
+        map_id: int,
+        map_announced_at: Optional[datetime] = None
+    ):
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải mới có quyền gán map")
+
+        round_obj = db.query(TournamentRound).filter(TournamentRound.id == round_id, TournamentRound.tournament_id == t.id).first()
+        if not round_obj:
+            raise HTTPException(status_code=404, detail="Không tìm thấy vòng đấu")
+
+        if round_obj.status == "COMPLETED":
+            raise HTTPException(status_code=400, detail="Vòng đấu đã hoàn tất, không được thay đổi map")
+
+        playing_count = db.query(TournamentMatch).filter(
+            TournamentMatch.round_id == round_obj.id,
+            TournamentMatch.status == "PLAYING"
+        ).count()
+        if playing_count > 0:
+            raise HTTPException(status_code=400, detail="Vòng đấu đang có trận đang thi đấu, không thể thay đổi map lúc này!")
+
+        map_obj = db.query(TournamentMap).filter(TournamentMap.id == map_id, TournamentMap.tournament_id == t.id).first()
+        if not map_obj:
+            raise HTTPException(status_code=404, detail="Không tìm thấy map trong giải đấu")
+
+        round_obj.map_id = map_obj.id
+        round_obj.map_announced_at = map_announced_at
+
+        # Cập nhật map_id cho các trận chưa hoàn tất trong vòng
+        matches = db.query(TournamentMatch).filter(
+            TournamentMatch.round_id == round_obj.id,
+            TournamentMatch.status.notin_(["COMPLETED", "FORFEIT"])
+        ).all()
+        for m in matches:
+            m.map_id = map_obj.id
+
+        db.commit()
+        return {
+            "message": f"Đã gán map '{map_obj.name}' ({map_obj.size}x{map_obj.size}) cho {round_obj.round_name}",
+            "round_id": round_obj.id,
+            "map_id": map_obj.id,
+            "map_announced_at": map_announced_at
+        }
+
+    @staticmethod
+    def create_tournament_schedule(
+        db: Session,
+        tournament_id: int,
+        user: User,
+        data: TournamentScheduleCreate
+    ):
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải mới có quyền lên lịch thi đấu")
+
+        if data.max_concurrent_matches < 1:
+            raise HTTPException(status_code=400, detail="Số trận chạy đồng thời tối đa phải từ 1 trở lên")
+        if data.batch_size < 1:
+            raise HTTPException(status_code=400, detail="Số trận mỗi đợt phải từ 1 trở lên")
+
+        t.max_concurrent_matches = data.max_concurrent_matches
+
+        r1 = db.query(TournamentRound).filter(TournamentRound.tournament_id == t.id, TournamentRound.round_number == 1).first()
+        if not r1:
+            raise HTTPException(status_code=400, detail="Giải đấu chưa khởi động các vòng thi đấu")
+
+        real_matches = (
+            db.query(TournamentMatch)
+            .filter(TournamentMatch.round_id == r1.id, TournamentMatch.is_bye == False)
+            .order_by(TournamentMatch.match_order.asc())
+            .all()
+        )
+
+        base_time = data.first_batch_time or datetime.utcnow()
+        check_in_advance = timedelta(minutes=data.check_in_advance_minutes)
+        interval = timedelta(minutes=data.interval_minutes)
+        now = datetime.utcnow()
+
+        for idx, m in enumerate(real_matches):
+            batch_num = idx // data.batch_size
+            scheduled_start = base_time + (batch_num * interval)
+            check_in_opens = scheduled_start - check_in_advance
+            deadline = scheduled_start + timedelta(minutes=10)
+
+            m.scheduled_at = scheduled_start
+            m.check_in_opens_at = check_in_opens
+            m.participation_deadline = deadline
+
+            if now >= check_in_opens:
+                m.status = "READY"
+                m.ready_at = now
+            else:
+                m.status = "WAITING"
+
+        db.commit()
+        return {
+            "message": f"Đã lên lịch thành công cho {len(real_matches)} trận đấu chia làm {math.ceil(len(real_matches) / data.batch_size)} đợt",
+            "batch_count": math.ceil(len(real_matches) / data.batch_size),
+            "max_concurrent_matches": t.max_concurrent_matches
+        }
+
+    @staticmethod
+    def get_tournament_schedule(db: Session, tournament_id: int):
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+
+        TournamentService.run_scheduler_tick(db, tournament_id)
+
+        all_matches = (
+            db.query(TournamentMatch)
+            .filter(TournamentMatch.tournament_id == t.id)
+            .order_by(TournamentMatch.scheduled_at.asc(), TournamentMatch.match_order.asc())
+            .all()
+        )
+        running_count = sum(1 for m in all_matches if m.status == "PLAYING")
+        waiting_count = sum(1 for m in all_matches if m.status == "WAITING")
+        ready_count = sum(1 for m in all_matches if m.status == "READY")
+        completed_count = sum(1 for m in all_matches if m.status in ["COMPLETED", "FORFEIT"])
+
+        batches = {}
+        unscheduled = []
+        for m in all_matches:
+            match_data = {
+                "match_id": m.id,
+                "round_id": m.round_id,
+                "match_order": m.match_order,
+                "player1_name": m.player1.username if m.player1 else "Chờ xác định",
+                "player2_name": m.player2.username if m.player2 else "Chờ xác định",
+                "status": m.status,
+                "is_bye": m.is_bye,
+                "check_in_opens_at": m.check_in_opens_at.isoformat() if m.check_in_opens_at else None,
+                "scheduled_at": m.scheduled_at.isoformat() if m.scheduled_at else None,
+                "started_at": m.started_at.isoformat() if m.started_at else None,
+                "completed_at": m.completed_at.isoformat() if m.completed_at else None,
+                "participation_deadline": m.participation_deadline.isoformat() if m.participation_deadline else None
+            }
+            if m.scheduled_at:
+                time_key = m.scheduled_at.isoformat()
+                if time_key not in batches:
+                    batches[time_key] = []
+                batches[time_key].append(match_data)
+            else:
+                unscheduled.append(match_data)
+
+        return {
+            "tournament_id": t.id,
+            "max_concurrent_matches": getattr(t, "max_concurrent_matches", 4) or 4,
+            "stats": {
+                "running": running_count,
+                "waiting": waiting_count,
+                "ready": ready_count,
+                "completed": completed_count
+            },
+            "batches": batches,
+            "unscheduled": unscheduled
+        }
+
+    @staticmethod
+    def configure_match(
+        db: Session,
+        tournament_id: int,
+        match_id: int,
+        user: User,
+        data: MatchConfigUpdateRequest
+    ) -> TournamentMatchResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải hoặc Admin mới có quyền cấu hình trận đấu")
+
+        m = db.query(TournamentMatch).filter(
+            TournamentMatch.id == match_id,
+            TournamentMatch.tournament_id == t.id
+        ).first()
+        if not m:
+            raise HTTPException(status_code=404, detail="Không tìm thấy trận đấu trong giải này")
+
+        if m.status in ["PLAYING", "COMPLETED", "FORFEIT"]:
+            raise HTTPException(status_code=400, detail="Trận đấu đã hoặc đang diễn ra, không thể thay đổi cấu hình!")
+
+        if data.map_id is not None:
+            map_obj = db.query(TournamentMap).filter(
+                TournamentMap.id == data.map_id,
+                TournamentMap.tournament_id == t.id
+            ).first()
+            if not map_obj:
+                raise HTTPException(status_code=404, detail="Không tìm thấy map trong giải đấu")
+            if not map_obj.is_valid:
+                raise HTTPException(status_code=400, detail="Map được chọn chưa hợp lệ")
+            m.map_id = map_obj.id
+
+        if data.scheduled_at is not None:
+            m.scheduled_at = data.scheduled_at
+            # Công thức bảo mật map bắt buộc: scheduled_at - 24 giờ
+            m.map_reveal_at = data.scheduled_at - timedelta(hours=24)
+            m.check_in_opens_at = data.scheduled_at - timedelta(minutes=10)
+            m.participation_deadline = data.scheduled_at + timedelta(minutes=10)
+
+        db.commit()
+        db.refresh(m)
+
+        match_map = m.map
+        return TournamentMatchResponse(
+            id=m.id,
+            round_id=m.round_id,
+            match_order=m.match_order,
+            player1_id=m.player1_id,
+            player1_name=m.player1.username if m.player1 else None,
+            player1_bot_id=m.player1_bot_id,
+            player1_bot_name=m.player1_bot.name if m.player1_bot else None,
+            player1_joined_at=m.player1_joined_at,
+            player2_id=m.player2_id,
+            player2_name=m.player2.username if m.player2 else None,
+            player2_bot_id=m.player2_bot_id,
+            player2_bot_name=m.player2_bot.name if m.player2_bot else None,
+            player2_joined_at=m.player2_joined_at,
+            winner_id=m.winner_id,
+            winner_name=m.winner.username if m.winner else None,
+            is_bye=m.is_bye,
+            status=m.status,
+            map_id=m.map_id,
+            map_name=match_map.name if match_map else None,
+            map_size=match_map.size if match_map else None,
+            map_reveal_at=m.map_reveal_at,
+            is_map_revealed=True,
+            rocks=json.loads(match_map.rocks_json) if match_map and match_map.rocks_json else [],
+            scheduled_at=m.scheduled_at,
+            check_in_opens_at=m.check_in_opens_at,
+            started_at=m.started_at,
+            completed_at=m.completed_at,
+            ready_at=m.ready_at,
+            participation_deadline=m.participation_deadline,
+            result_reason=m.result_reason,
+            match_id=m.match_id,
+            is_configured=bool(m.is_bye or (m.map_id and m.scheduled_at))
+        )
+
+    @staticmethod
+    def get_setup_overview(db: Session, tournament_id: int, user: User) -> SetupOverviewResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải hoặc Admin mới có quyền xem tổng quan thiết lập")
+
+        rounds = (
+            db.query(TournamentRound)
+            .filter(TournamentRound.tournament_id == t.id)
+            .order_by(TournamentRound.round_number.asc())
+            .all()
+        )
+
+        match_items: List[SetupOverviewMatch] = []
+        errors: List[str] = []
+
+        for r in rounds:
+            matches = (
+                db.query(TournamentMatch)
+                .filter(TournamentMatch.round_id == r.id)
+                .order_by(TournamentMatch.match_order.asc())
+                .all()
+            )
+            for m in matches:
+                m_errs = []
+                if not m.is_bye:
+                    if not m.map_id:
+                        m_errs.append("Chưa gán Map")
+                    if not m.scheduled_at:
+                        m_errs.append("Chưa đặt thời gian thi đấu")
+
+                is_conf = bool(m.is_bye or (m.map_id is not None and m.scheduled_at is not None))
+                m_map = m.map or r.map
+                rock_cnt = 0
+                if m_map and m_map.rocks_json:
+                    try:
+                        rock_cnt = len(json.loads(m_map.rocks_json))
+                    except Exception:
+                        rock_cnt = 0
+
+                reveal_at = m.map_reveal_at or (m.scheduled_at - timedelta(hours=24) if m.scheduled_at else None)
+
+                if m_errs and r.round_number == 1 and not m.is_bye:
+                    errors.append(f"Trận {m.match_order + 1} ({r.round_name}): {', '.join(m_errs)}")
+
+                match_items.append(
+                    SetupOverviewMatch(
+                        match_id=m.id,
+                        round_id=r.id,
+                        round_number=r.round_number,
+                        round_name=r.round_name,
+                        match_order=m.match_order,
+                        player1_id=m.player1_id,
+                        player1_name=m.player1.username if m.player1 else "Chờ xác định",
+                        player2_id=m.player2_id,
+                        player2_name=m.player2.username if m.player2 else "Chờ xác định",
+                        is_bye=m.is_bye,
+                        map_id=m.map_id or (r.map_id if r.map_id else None),
+                        map_name=m_map.name if m_map else None,
+                        map_size=m_map.size if m_map else None,
+                        rock_count=rock_cnt,
+                        scheduled_at=m.scheduled_at,
+                        map_reveal_at=reveal_at,
+                        status=m.status,
+                        is_configured=is_conf,
+                        validation_errors=m_errs
+                    )
+                )
+
+        total_matches = len(match_items)
+        configured_matches = sum(1 for item in match_items if item.is_configured)
+        can_publish = (len(errors) == 0 and total_matches > 0)
+
+        return SetupOverviewResponse(
+            tournament_id=t.id,
+            status=t.status,
+            can_publish=can_publish,
+            total_matches=total_matches,
+            configured_matches=configured_matches,
+            matches=match_items,
+            errors=errors
+        )
+
+    @staticmethod
+    def publish_tournament(db: Session, tournament_id: int, user: User) -> TournamentDetailResponse:
+        t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+        if not t:
+            raise HTTPException(status_code=404, detail="Không tìm thấy giải đấu")
+        if t.creator_id != user.id and not getattr(user, "is_admin", False):
+            raise HTTPException(status_code=403, detail="Chỉ người tổ chức giải hoặc Admin mới có quyền công bố giải đấu")
+
+        if t.status not in ["SETTING_UP", "REGISTRATION_OPEN", "REGISTRATION"]:
+            raise HTTPException(status_code=400, detail=f"Không thể công bố giải đấu ở trạng thái {t.status}")
+
+        r1 = db.query(TournamentRound).filter(
+            TournamentRound.tournament_id == t.id,
+            TournamentRound.round_number == 1
+        ).first()
+        if not r1:
+            raise HTTPException(status_code=400, detail="Giải đấu chưa được tạo nhánh đấu")
+
+        r1_matches = db.query(TournamentMatch).filter(
+            TournamentMatch.round_id == r1.id,
+            TournamentMatch.is_bye == False
+        ).all()
+
+        unconfigured = []
+        for m in r1_matches:
+            missing = []
+            if not m.map_id:
+                missing.append("chưa có Map")
+            if not m.scheduled_at:
+                missing.append("chưa có lịch thi đấu")
+            if missing:
+                unconfigured.append(f"Trận #{m.match_order + 1} ({', '.join(missing)})")
+
+        if unconfigured:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Chưa thể công bố! Vui lòng hoàn tất cấu hình cho các trận: {'; '.join(unconfigured)}"
+            )
+
+        now = datetime.utcnow()
+        t.status = "PUBLISHED"
+        t.published_at = now
+        r1.status = "IN_PROGRESS"
+
+        for m in r1_matches:
+            if m.check_in_opens_at and now >= m.check_in_opens_at:
+                m.status = "READY"
+                m.ready_at = now
+                t.status = "IN_PROGRESS"
+            elif not m.check_in_opens_at and m.scheduled_at and now >= m.scheduled_at:
+                m.status = "READY"
+                m.ready_at = now
+                t.status = "IN_PROGRESS"
+
+        db.commit()
+        return TournamentService.get_tournament_detail(db, t.id, current_user=user)
+
+    @staticmethod
+    def run_scheduler_tick(db: Session, tournament_id: Optional[int] = None):
+        """
+        Bộ điều phối lập lịch và giới hạn tài nguyên chạy Bot:
+        1. Kích hoạt trận WAITING -> READY khi đến thời gian check_in_opens_at hoặc scheduled_at.
+        2. Tự động xử thua các trận READY quá hạn 10 phút (FORFEIT).
+        3. Khởi chạy các trận có đủ 2 người điểm danh nhưng chưa bắt đầu (hàng đợi chờ thi đấu),
+           tuân thủ nghiêm ngặt giới hạn max_concurrent_matches!
+        """
+        now = datetime.utcnow()
+        query = db.query(Tournament)
+        if tournament_id:
+            query = query.filter(Tournament.id == tournament_id)
+        tournaments = query.filter(Tournament.status.in_(["IN_PROGRESS", "PUBLISHED"])).all()
+
+        for t in tournaments:
+            max_concurrent = getattr(t, "max_concurrent_matches", 4) or 4
+
+            # 1. Kích hoạt trận WAITING -> READY
+            waiting_matches = (
+                db.query(TournamentMatch)
+                .filter(
+                    TournamentMatch.tournament_id == t.id,
+                    TournamentMatch.status == "WAITING",
+                    TournamentMatch.player1_id != None,
+                    TournamentMatch.player2_id != None
+                )
+                .all()
+            )
+            for wm in waiting_matches:
+                if wm.check_in_opens_at:
+                    if now >= wm.check_in_opens_at:
+                        wm.status = "READY"
+                        wm.ready_at = now
+                        if not wm.participation_deadline:
+                            wm.participation_deadline = (wm.scheduled_at or now) + timedelta(minutes=10)
+                elif wm.scheduled_at:
+                    if now >= wm.scheduled_at:
+                        wm.status = "READY"
+                        wm.ready_at = now
+                        if not wm.participation_deadline:
+                            wm.participation_deadline = now + timedelta(minutes=10)
+
+            # 2. Quét hạn chót 10 phút cho các trận READY
+            TournamentService.check_tournament_deadlines(db, t.id)
+
+            # 3. Đếm số trận đang PLAYING
+            running_count = (
+                db.query(TournamentMatch)
+                .filter(TournamentMatch.tournament_id == t.id, TournamentMatch.status == "PLAYING")
+                .count()
+            )
+
+            # 4. Tìm các trận READY đã được cả 2 tuyển thủ điểm danh nhưng chưa bắt đầu
+            queued_matches = (
+                db.query(TournamentMatch)
+                .filter(
+                    TournamentMatch.tournament_id == t.id,
+                    TournamentMatch.status == "READY",
+                    TournamentMatch.player1_joined_at != None,
+                    TournamentMatch.player2_joined_at != None
+                )
+                .order_by(TournamentMatch.scheduled_at.asc(), TournamentMatch.match_order.asc())
+                .all()
+            )
+
+            for qm in queued_matches:
+                if running_count >= max_concurrent:
+                    break
+
+                if qm.scheduled_at and now < qm.scheduled_at:
+                    continue
+
+                qm.status = "PLAYING"
+                qm.started_at = now
+                running_count += 1
+                db.commit()
+
+                # Khởi chạy trận đấu
+                TournamentService._execute_tournament_match(db, qm)
+

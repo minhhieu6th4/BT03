@@ -1,8 +1,26 @@
+from typing import Optional
 from .game_state import GameState
 from .move import Move
 from .piece import Piece, Team, PieceType
 from .game_result import GameResult, ResultType
 from .rule_set import RuleSet
+
+def get_reserved_positions(size: int) -> set[tuple[int, int]]:
+    """Tọa độ căn cứ và vị trí xuất phát quân cờ cố định không được đặt đá."""
+    reserved = {(0, 0), (size - 1, size - 1)}
+    if size in (4, 5, 6):
+        # Bàn cờ 4x4, 5x5, 6x6: mỗi bên 3 quân (1 búa, 1 kéo, 1 giấy)
+        red_pts = {(0, 1), (1, 0), (1, 1)}
+        blue_pts = {(size - 1, size - 2), (size - 2, size - 1), (size - 2, size - 2)}
+    else:
+        # Bàn cờ từ 9x9 trở lên: mỗi bên 6 quân (2 búa, 2 kéo, 2 giấy)
+        red_pts = {(0, 1), (1, 0), (1, 1), (0, 2), (2, 0), (2, 2)}
+        blue_pts = {
+            (size - 1, size - 2), (size - 2, size - 1), (size - 2, size - 2),
+            (size - 1, size - 3), (size - 3, size - 1), (size - 3, size - 3)
+        }
+    return reserved | red_pts | blue_pts
+
 
 class GameEngine:
     def __init__(self, rule_set: RuleSet):
@@ -12,50 +30,83 @@ class GameEngine:
 
     def _initialize_board(self):
         size = self.rule_set.board_size
-        
-        # Red pieces (6 pieces)
-        self.state.board.set_piece((0, 1), Piece(Team.RED, PieceType.ROCK))
-        self.state.board.set_piece((1, 0), Piece(Team.RED, PieceType.PAPER))
-        self.state.board.set_piece((1, 1), Piece(Team.RED, PieceType.SCISSORS))
-        self.state.board.set_piece((0, 2), Piece(Team.RED, PieceType.ROCK))
-        self.state.board.set_piece((2, 0), Piece(Team.RED, PieceType.PAPER))
-        self.state.board.set_piece((2, 2), Piece(Team.RED, PieceType.SCISSORS))
-        
-        # Blue pieces (6 pieces)
-        self.state.board.set_piece((size-1, size-2), Piece(Team.BLUE, PieceType.ROCK))
-        self.state.board.set_piece((size-2, size-1), Piece(Team.BLUE, PieceType.PAPER))
-        self.state.board.set_piece((size-2, size-2), Piece(Team.BLUE, PieceType.SCISSORS))
-        self.state.board.set_piece((size-1, size-3), Piece(Team.BLUE, PieceType.ROCK))
-        self.state.board.set_piece((size-3, size-1), Piece(Team.BLUE, PieceType.PAPER))
-        self.state.board.set_piece((size-3, size-3), Piece(Team.BLUE, PieceType.SCISSORS))
 
-    def is_valid_move(self, state: GameState, move: Move) -> bool:
+        # Nạp đá cản vào bàn cờ trước
+        for rock in getattr(self.rule_set, "rocks", []):
+            self.state.board.add_rock(tuple(rock))
+
+        if size in (4, 5, 6):
+            # Bàn cờ 4x4, 5x5, 6x6: Mỗi bên chỉ có 3 quân cờ (1 Búa, 1 Giấy/Bao, 1 Kéo)
+            # Red pieces (3 pieces: 1 Búa, 1 Giấy, 1 Kéo)
+            self.state.board.set_piece((0, 1), Piece(Team.RED, PieceType.ROCK))
+            self.state.board.set_piece((1, 0), Piece(Team.RED, PieceType.PAPER))
+            self.state.board.set_piece((1, 1), Piece(Team.RED, PieceType.SCISSORS))
+
+            # Blue pieces (3 pieces: 1 Búa, 1 Giấy, 1 Kéo)
+            self.state.board.set_piece((size - 1, size - 2), Piece(Team.BLUE, PieceType.ROCK))
+            self.state.board.set_piece((size - 2, size - 1), Piece(Team.BLUE, PieceType.PAPER))
+            self.state.board.set_piece((size - 2, size - 2), Piece(Team.BLUE, PieceType.SCISSORS))
+        else:
+            # Các bàn cờ còn lại (9x9, 15x15, 18x18...): Mỗi bên có 6 quân cờ (2 Búa, 2 Kéo, 2 Giấy)
+            # Red pieces (6 pieces: 2 Búa, 2 Giấy, 2 Kéo)
+            self.state.board.set_piece((0, 1), Piece(Team.RED, PieceType.ROCK))
+            self.state.board.set_piece((1, 0), Piece(Team.RED, PieceType.PAPER))
+            self.state.board.set_piece((1, 1), Piece(Team.RED, PieceType.SCISSORS))
+            self.state.board.set_piece((0, 2), Piece(Team.RED, PieceType.ROCK))
+            self.state.board.set_piece((2, 0), Piece(Team.RED, PieceType.PAPER))
+            self.state.board.set_piece((2, 2), Piece(Team.RED, PieceType.SCISSORS))
+
+            # Blue pieces (6 pieces: 2 Búa, 2 Giấy, 2 Kéo)
+            self.state.board.set_piece((size - 1, size - 2), Piece(Team.BLUE, PieceType.ROCK))
+            self.state.board.set_piece((size - 2, size - 1), Piece(Team.BLUE, PieceType.PAPER))
+            self.state.board.set_piece((size - 2, size - 2), Piece(Team.BLUE, PieceType.SCISSORS))
+            self.state.board.set_piece((size - 1, size - 3), Piece(Team.BLUE, PieceType.ROCK))
+            self.state.board.set_piece((size - 3, size - 1), Piece(Team.BLUE, PieceType.PAPER))
+            self.state.board.set_piece((size - 3, size - 3), Piece(Team.BLUE, PieceType.SCISSORS))
+
+    def is_valid_move(self, state_or_move, move_or_team=None) -> bool:
+        from .game_state import GameState
+        if isinstance(state_or_move, GameState):
+            state = state_or_move
+            move = move_or_team
+        else:
+            state = self.state
+            move = state_or_move
+
+        if move is None:
+            return False
+
         r1, c1 = move.from_pos
         r2, c2 = move.to_pos
-        
+
         # Check bounds
         if not (0 <= r1 < state.board.size and 0 <= c1 < state.board.size): return False
         if not (0 <= r2 < state.board.size and 0 <= c2 < state.board.size): return False
-        
+
+        # Không được đi vào hoặc đi từ ô có đá cản
+        if state.board.is_rock(move.from_pos) or state.board.is_rock(move.to_pos):
+            return False
+
         piece = state.board.get_piece(move.from_pos)
         if piece is None: return False
         if piece.team != state.current_team: return False
-        
+
         # Check 8 directions (distance is exactly 1)
         if max(abs(r1 - r2), abs(c1 - c2)) != 1: return False
-        
+
         # Cannot move to own base
         if piece.team == Team.RED and move.to_pos == (0, 0):
             return False
         if piece.team == Team.BLUE and move.to_pos == (state.board.size-1, state.board.size-1):
             return False
-        
+
         # Cannot move to square with friendly piece
         target_piece = state.board.get_piece(move.to_pos)
         if target_piece and target_piece.team == piece.team:
             return False
-            
+
         return True
+
 
     def _resolve_combat(self, piece1: Piece, piece2: Piece) -> Piece:
         """Returns the winning piece, or None if both are destroyed."""
@@ -92,6 +143,17 @@ class GameEngine:
         state.current_team = Team.BLUE if state.current_team == Team.RED else Team.RED
         if state.current_team == Team.RED:
             state.turn += 1
+
+    def make_move(self, move: Move) -> Optional[GameResult]:
+        """Thực hiện một nước đi trên bàn cờ. Nếu nước đi không hợp lệ, xử thua ngay lập tức!"""
+        if not self.is_valid_move(self.state, move):
+            losing_team = self.state.current_team
+            winning_team = Team.BLUE if losing_team == Team.RED else Team.RED
+            reason = "Nước đi không hợp lệ (đi vào ô đá hoặc vi phạm luật)"
+            return GameResult(ResultType.WIN, winning_team, reason)
+
+        self.apply_move(self.state, move)
+        return self.check_winner(self.state)
 
     def check_winner(self, state: GameState) -> GameResult:
         # Check win condition 1: Reach destination

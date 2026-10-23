@@ -3,6 +3,14 @@ class Move:
         self.from_pos = from_pos
         self.to_pos = to_pos
 
+    @property
+    def to_coord(self):
+        return self.to_pos
+
+    @property
+    def from_coord(self):
+        return self.from_pos
+
     def to_dict(self):
         return {
             "from": list(self.from_pos),

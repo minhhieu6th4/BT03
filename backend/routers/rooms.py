@@ -54,9 +54,13 @@ def create_room(
     return RoomService._to_response(db, room, current_user.id)
 
 @router.get("/", response_model=List[RoomResponse])
-def list_open_rooms(db: Session = Depends(get_db)):
+def list_open_rooms(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
     """Danh sách các phòng đang mở và chờ đối thủ (1/2 người)"""
-    return RoomService.list_open_rooms(db)
+    return RoomService.list_open_rooms(db, offset=offset, limit=limit)
 
 @router.get("/{identifier}", response_model=RoomResponse)
 def get_room_details(
@@ -117,9 +121,11 @@ def start_match(
     room = RoomService.get_room_by_id_or_code(db, identifier)
     match = RoomService.start_room_match(db, room.id, current_user)
     return {
-        "message": "Trận đấu giữa 2 bot đã hoàn thành thành công!",
+        "message": "Trận đấu đã hoàn tất." if match.status == "COMPLETED" else "Trận đấu đã được xếp hàng.",
         "match_id": match.id,
         "room_id": room.id,
+        "status": match.status,
+        "job_id": match.queue_job_id,
         "red_user_id": match.red_user_id,
         "blue_user_id": match.blue_user_id,
         "winner_user_id": match.winner_user_id,

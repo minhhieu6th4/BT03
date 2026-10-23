@@ -606,14 +606,17 @@
                             let cardClass = 'match-card';
                             if (m.status === 'READY') cardClass += ' ready';
                             else if (m.status === 'PLAYING') cardClass += ' playing';
+                            else if (m.status === 'QUEUED') cardClass += ' playing';
                             else if (m.status === 'COMPLETED') cardClass += ' completed';
                             else if (m.status === 'FORFEIT') cardClass += ' forfeit';
 
                             let statusBadge = `<span class="badge badge-waiting">${m.status}</span>`;
                             if (m.is_bye) statusBadge = `<span class="badge-bye">ĐẶC CÁCH BYE</span>`;
                             else if (m.status === 'READY') statusBadge = `<span class="badge badge-playing">SẴN SÀNG</span>`;
+                            else if (m.status === 'QUEUED') statusBadge = `<span class="badge badge-playing">ĐANG XẾP HÀNG</span>`;
                             else if (m.status === 'PLAYING') statusBadge = `<span class="badge badge-playing">ĐANG THI ĐẤU</span>`;
                             else if (m.status === 'COMPLETED') statusBadge = `<span class="badge badge-ready">XONG</span>`;
+                            else if (m.status === 'FAILED') statusBadge = `<span class="badge badge-forfeit">LỖI WORKER</span>`;
                             else if (m.status === 'FORFEIT') statusBadge = `<span class="badge badge-forfeit">XỬ THUA</span>`;
 
                             const canJoin = (m.status === 'READY' && isMyMatch && ((isP1 && !p1Joined) || (isP2 && !p2Joined)));
@@ -682,6 +685,8 @@
                                             </button>
                                         </div>
                                     ` : ''}
+                                    ${m.status === 'FAILED' && m.result_reason ? `<div class="match-error">${m.result_reason}</div>` : ''}
+                                    ${m.status === 'COMPLETED' && m.match_id ? `<button class="btn btn-outline" onclick="openVisualArena(${m.id},${m.match_id})">Xem replay</button>` : ''}
                                 </div>
                             `;
                         }).join('')}
@@ -1172,6 +1177,9 @@
                     loadTournament();
                 })
                 .catch(() => loadTournament());
+            window.setInterval(() => {
+                if (currentDetail?.tournament?.status === 'IN_PROGRESS') loadTournament();
+            }, 5000);
         });
     </script>
 </body>

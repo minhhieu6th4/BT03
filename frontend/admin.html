@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a><a href="profile.html">Hồ Sơ</a>
+            <a href="notifications.html">Thông báo</a>
+            <span id="navUserInfo" style="display:none"></span>
+            <a href="login.html" id="navLoginBtn">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Bảng điều hành</h2>
+        <p id="adminStatus" role="status"></p>
+        <section>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <h3>Báo cáo người chơi và trận đấu</h3>
+                <select id="reportFilter" aria-label="Lọc báo cáo" onchange="loadReports()">
+                    <option>OPEN</option><option>IN_REVIEW</option><option>RESOLVED</option><option>DISMISSED</option><option>ALL</option>
+                </select>
+            </div>
+            <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Đối tượng</th><th>Lý do</th><th>Chi tiết</th><th>Trạng thái</th><th>Xử lý</th></tr></thead><tbody id="reportsBody"></tbody></table></div>
+        </section>
+        <section style="margin-top:32px">
+            <h3>Tài khoản</h3>
+            <form id="userSearchForm" style="display:flex;gap:8px;max-width:520px">
+                <input id="userSearch" placeholder="Tìm theo username" maxlength="50">
+                <button class="btn btn-outline">Tìm</button>
+            </form>
+            <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+        </section>
+        <section style="margin-top:32px">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h3>Giải đấu</h3><select id="tournamentFilter" onchange="loadTournaments()"><option>ALL</option><option>REGISTRATION_OPEN</option><option>IN_PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select></div>
+            <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Tên giải</th><th>Người tổ chức</th><th>Trạng thái</th><th>Nhà vô địch</th></tr></thead><tbody id="tournamentsBody"></tbody></table></div>
+        </section>
+        <section style="margin-top:32px">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h3>Trận đấu gần đây</h3><select id="matchFilter" onchange="loadMatches()"><option>ALL</option><option>PENDING</option><option>PLAYING</option><option>COMPLETED</option><option>CANCELLED</option></select></div>
+            <div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Chế độ</th><th>Đỏ</th><th>Xanh</th><th>Kết quả</th><th>Lý do kết thúc</th></tr></thead><tbody id="matchesBody"></tbody></table></div>
+        </section>
+    </main>
+    <script src="js/nav.js"></script>
+    <script>
+        const adminStatus = document.getElementById('adminStatus');
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        async function request(path, options = {}) {
+            const response = await fetch(`${API_BASE}/api/admin${path}`, {headers:authHeaders(), ...options});
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Không thể tải dữ liệu quản trị');
+            return data;
+        }
+        async function loadReports() {
+            try {
+                const items = await request(`/reports?status=${document.getElementById('reportFilter').value}`);
+                document.getElementById('reportsBody').innerHTML = items.map(item => `<tr><td>#${item.id}</td><td>${item.reported_user_id ? `User #${item.reported_user_id}` : ''} ${item.match_id ? `Trận #${item.match_id}` : ''}</td><td>${esc(item.reason)}</td><td>${esc(item.details)}</td><td>${esc(item.status)}</td><td><select id="report-${item.id}"><option>IN_REVIEW</option><option>RESOLVED</option><option>DISMISSED</option></select><button class="btn btn-outline" onclick="updateReport(${item.id})">Lưu</button></td></tr>`).join('');
+            } catch (error) { adminStatus.textContent = error.message; }
+        }
+        async function updateReport(id) {
+            const status = document.getElementById(`report-${id}`).value;
+            try {
+                await request(`/reports/${id}`, {method:'PATCH', body:JSON.stringify({status, admin_note:''})});
+                loadReports();
+            } catch (error) { adminStatus.textContent = error.message; }
+        }
+        async function loadUsers() {
+            try {
+                const q = new URLSearchParams({search:document.getElementById('userSearch').value.trim()});
+                const items = await request(`/users?${q}`);
+                document.getElementById('usersBody').innerHTML = items.map(item => `<tr><td>#${item.id}</td><td>${esc(item.username)}</td><td>${esc(item.email)}</td><td>${item.is_admin ? 'Admin' : 'Người chơi'}</td><td>${item.is_active ? 'Hoạt động' : 'Đã khóa'}</td><td><button class="btn btn-outline" onclick="setUserActive(${item.id},${!item.is_active})">${item.is_active ? 'Vô hiệu hóa' : 'Kích hoạt'}</button></td></tr>`).join('');
+            } catch (error) { adminStatus.textContent = error.message; }
+        }
+        async function setUserActive(id, is_active) {
+            try { await request(`/users/${id}/status`, {method:'PATCH', body:JSON.stringify({is_active})}); loadUsers(); }
+            catch (error) { adminStatus.textContent = error.message; }
+        }
+        async function loadTournaments() {
+            try {
+                const items = await request(`/tournaments?status=${document.getElementById('tournamentFilter').value}`);
+                document.getElementById('tournamentsBody').innerHTML = items.map(item => `<tr><td>#${item.id}</td><td><a href="tournament_detail.html?id=${item.id}">${esc(item.name)}</a></td><td>${esc(item.creator_name)}</td><td>${esc(item.status)}</td><td>${esc(item.champion_id ?? '-')}</td></tr>`).join('');
+            } catch (error) { adminStatus.textContent = error.message; }
+        }
+        async function loadMatches() {
+            try {
+                const items = await request(`/matches?status=${document.getElementById('matchFilter').value}`);
+                document.getElementById('matchesBody').innerHTML = items.map(item => `<tr><td>#${item.id}</td><td>${esc(item.match_type)}</td><td>${esc(item.red_user_id ?? '-')}</td><td>${esc(item.blue_user_id ?? '-')}</td><td>${item.is_draw ? 'Hòa' : esc(item.winner_user_id ?? 'Chưa có kết quả')}</td><td>${esc(item.termination_reason)}</td></tr>`).join('');
+            } catch (error) { adminStatus.textContent = error.message; }
+        }
+        document.getElementById('userSearchForm').addEventListener('submit', event => {event.preventDefault(); loadUsers();});
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const me = await fetch(`${API_BASE}/api/users/me`, {headers:authHeaders()});
+                if (!me.ok || !(await me.json()).is_admin) throw new Error('Trang này chỉ dành cho admin.');
+                await Promise.all([loadReports(), loadUsers(), loadTournaments(), loadMatches()]);
+            } catch (error) { adminStatus.textContent = error.message; }
+        });
+    </script>
+</body>
+</html>

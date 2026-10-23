@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a>
+            <a href="rooms.html">Thi Đấu</a>
+            <a href="tournaments.html">Giải Đấu</a>
+            <a href="profile.html" id="navProfileLink" style="display:none">Hồ Sơ</a>
+            <span id="navUserInfo" style="display:none"></span>
+            <a href="login.html" id="navLoginBtn">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+    <main>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <h2>Thông báo</h2>
+            <button class="btn btn-outline" type="button" onclick="markAllRead()">Đánh dấu đã đọc</button>
+        </div>
+        <p id="notificationStatus" role="status"></p>
+        <div id="notificationList"></div>
+        <button id="loadMore" class="btn btn-outline" type="button" onclick="loadMore()" hidden>Tải thêm</button>
+    </main>
+    <script src="js/nav.js"></script>
+    <script>
+        let notificationOffset = 0;
+        const pageSize = 30;
+        const notificationList = document.getElementById('notificationList');
+        const statusText = document.getElementById('notificationStatus');
+        const escapeText = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+        async function loadNotifications(append = false) {
+            if (!getAuthToken()) {
+                statusText.textContent = 'Đăng nhập để xem thông báo.';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/notifications/?offset=${notificationOffset}&limit=${pageSize}`, {headers: authHeaders()});
+                if (!response.ok) throw new Error('Không tải được thông báo.');
+                const data = await response.json();
+                const rows = data.items.map(item => `<article class="card" style="margin:12px 0;opacity:${item.is_read ? '.72' : '1'}">
+                    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                        <strong>${escapeText(item.title)}</strong>
+                        <time>${new Date(item.created_at).toLocaleString('vi-VN')}</time>
+                    </div>
+                    <p>${escapeText(item.message)}</p>
+                    <div style="display:flex;gap:12px">
+                        ${item.link ? `<a href="${escapeText(item.link)}">Mở nội dung</a>` : ''}
+                        ${!item.is_read ? `<button class="btn btn-outline" onclick="markRead(${item.id})">Đã đọc</button>` : '<span>Đã đọc</span>'}
+                    </div>
+                </article>`).join('');
+                notificationList.insertAdjacentHTML(append ? 'beforeend' : 'afterbegin', rows);
+                if (!append && !data.items.length) statusText.textContent = 'Chưa có thông báo.';
+                document.getElementById('loadMore').hidden = notificationOffset + data.items.length >= data.total;
+            } catch (error) {
+                statusText.textContent = error.message;
+            }
+        }
+
+        async function markRead(id) {
+            await fetch(`${API_BASE}/api/notifications/${id}/read`, {method:'PATCH', headers:authHeaders()});
+            notificationOffset = 0;
+            notificationList.replaceChildren();
+            loadNotifications();
+        }
+
+        async function markAllRead() {
+            await fetch(`${API_BASE}/api/notifications/read-all`, {method:'POST', headers:authHeaders()});
+            notificationOffset = 0;
+            notificationList.replaceChildren();
+            loadNotifications();
+        }
+
+        function loadMore() {
+            notificationOffset += pageSize;
+            loadNotifications(true);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => loadNotifications());
+        window.setInterval(() => {
+            if (notificationOffset === 0) {
+                notificationList.replaceChildren();
+                loadNotifications();
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

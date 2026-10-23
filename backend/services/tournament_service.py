@@ -5,12 +5,15 @@ import random
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from fastapi import HTTPException
 
 from backend.models.tournament import Tournament, TournamentParticipant, TournamentRound, TournamentMatch
 from backend.models.user import User
 from backend.models.bot import Bot, BotVersion
 from backend.models.match import Match
+from backend.services.notification_service import NotificationService
+from backend.services.match_queue import enqueue_or_run_inline
 from backend.schemas.tournament import (
     TournamentResponse, TournamentDetailResponse, TournamentParticipantResponse,
     TournamentRoundResponse, TournamentMatchResponse
@@ -206,6 +209,11 @@ class TournamentService:
                 existing.status = "ACCEPTED" if auto_accept else "PENDING"
                 existing.bot_id = bot_id
                 existing.registered_at = datetime.utcnow()
+                NotificationService.create(
+                    db, t.creator_id, "TOURNAMENT_REGISTRATION", "Yêu cầu đăng ký giải đấu",
+                    f"{user.username} đã gửi yêu cầu tham gia {t.name}.",
+                    f"tournament_detail.html?id={t.id}",
+                )
                 db.commit()
                 return {"message": "Đã gửi lại yêu cầu tham gia giải đấu", "seed": existing.seed, "status": existing.status}
 
@@ -227,6 +235,11 @@ class TournamentService:
             seed=current_count + 1
         )
         db.add(participant)
+        NotificationService.create(
+            db, t.creator_id, "TOURNAMENT_REGISTRATION", "Yêu cầu đăng ký giải đấu",
+            f"{user.username} đã gửi yêu cầu tham gia {t.name}.",
+            f"tournament_detail.html?id={t.id}",
+        )
         db.commit()
         db.refresh(participant)
         return {"message": "Đăng ký thành công", "seed": participant.seed, "status": participant.status}
@@ -267,6 +280,11 @@ class TournamentService:
             p.status = "ACCEPTED"
             p.reviewed_at = datetime.utcnow()
             p.reviewed_by_id = user.id
+            NotificationService.create(
+                db, p.user_id, "TOURNAMENT_REGISTRATION_ACCEPTED", "Đăng ký giải đấu được chấp nhận",
+                f"Bạn đã được duyệt tham gia giải {t.name}.",
+                f"tournament_detail.html?id={t.id}",
+            )
             db.commit()
             return {"message": "Đã chấp nhận tuyển thủ vào danh sách thi đấu chính thức", "status": "ACCEPTED"}
 
@@ -274,6 +292,11 @@ class TournamentService:
             p.status = "REJECTED"
             p.reviewed_at = datetime.utcnow()
             p.reviewed_by_id = user.id
+            NotificationService.create(
+                db, p.user_id, "TOURNAMENT_REGISTRATION_REJECTED", "Đăng ký giải đấu bị từ chối",
+                f"Yêu cầu tham gia giải {t.name} không được chấp nhận.",
+                f"tournament_detail.html?id={t.id}",
+            )
             db.commit()
             return {"message": "Đã từ chối yêu cầu tham gia", "status": "REJECTED"}
         else:
@@ -589,6 +612,14 @@ class TournamentService:
         db.flush()
         m.match_id = hist_match.id
 
+        for participant_id in (m.player1_id, m.player2_id):
+            if participant_id:
+                NotificationService.create(
+                    db, participant_id, "TOURNAMENT_MATCH_FORFEIT", "Trận giải đấu đã xử lý vắng mặt",
+                    f"Trận #{m.id} của giải #{m.tournament_id} đã kết thúc do vắng mặt.",
+                    f"tournament_detail.html?id={m.tournament_id}",
+                )
+
         TournamentService._on_match_concluded(db, m)
         db.commit()
 
@@ -632,9 +663,33 @@ class TournamentService:
 
         # Nếu cả 2 người chơi cùng điểm danh thành công -> Bắt đầu thi đấu ngay lập tức!
         if m.player1_joined_at and m.player2_joined_at:
-            m.status = "PLAYING"
+            claimed = db.execute(
+                update(TournamentMatch)
+                .where(
+                    TournamentMatch.id == m.id,
+                    TournamentMatch.status == "READY",
+                    TournamentMatch.player1_joined_at.is_not(None),
+                    TournamentMatch.player2_joined_at.is_not(None),
+                )
+                .values(status="QUEUED")
+            ).rowcount
             db.commit()
-            TournamentService._execute_tournament_match(db, m)
+            db.refresh(m)
+            if claimed == 1:
+                try:
+                    job_id = enqueue_or_run_inline(
+                        "backend.jobs.run_tournament_match",
+                        (m.id,),
+                        lambda: TournamentService._execute_tournament_match(db, m),
+                    )
+                except HTTPException:
+                    m.status = "FAILED"
+                    m.result_reason = "Không thể đưa trận đấu vào hàng đợi"
+                    db.commit()
+                    raise
+                if job_id:
+                    m.queue_job_id = job_id
+                    db.commit()
 
         return TournamentService.get_match_detail(db, tournament_id, match_id)
 
@@ -800,6 +855,14 @@ class TournamentService:
         db.add(match_record)
         db.flush()
         m.match_id = match_record.id
+
+        for participant_id in (m.player1_id, m.player2_id):
+            if participant_id:
+                NotificationService.create(
+                    db, participant_id, "TOURNAMENT_MATCH_COMPLETED", "Trận giải đấu đã kết thúc",
+                    f"Trận #{m.id} của giải #{m.tournament_id} đã hoàn tất.",
+                    f"tournament_detail.html?id={m.tournament_id}",
+                )
 
         TournamentService._on_match_concluded(db, m)
         db.commit()

@@ -24,16 +24,28 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         # Giải mã Token bằng SECRET_KEY
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        subject = payload.get("sub")
+        user_id = payload.get("uid")
+        if subject is None and user_id is None:
             raise credentials_exception
     except jwt.PyJWTError:
         # Bắt các lỗi như Hết hạn (ExpiredSignatureError) hoặc Sai chữ ký
         raise credentials_exception
         
     # Truy vấn cơ sở dữ liệu để lấy Object User
-    user = db.query(User).filter(User.username == username).first()
+    if user_id is not None:
+        try:
+            user = db.query(User).filter(User.id == int(user_id)).first()
+        except (TypeError, ValueError):
+            raise credentials_exception
+    else:
+        user = db.query(User).filter(User.username == subject).first()
     if user is None:
         raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị vô hiệu hóa",
+        )
         
     return user

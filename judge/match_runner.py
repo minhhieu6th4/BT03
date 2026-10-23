@@ -5,6 +5,7 @@ import sys
 import shutil
 import threading
 import queue
+from backend.config.settings import settings
 
 def is_docker_available() -> bool:
     """Kiểm tra Docker Desktop / Docker Engine có khả dụng không"""
@@ -67,14 +68,24 @@ class DockerBotWrapper:
                 except Exception:
                     pass
 
+        if not self.use_docker and settings.ENVIRONMENT.lower() == "production":
+            raise RuntimeError("Docker sandbox image is required in production; host subprocess fallback is disabled.")
+
         if self.use_docker:
             bot_filename = os.path.basename(self.bot_file) if hasattr(self, 'bot_file') and self.bot_file else "student_bot.py"
             # Khởi chạy trong Docker Sandbox được cô lập hoàn toàn
             cmd = [
                 "docker", "run", "--rm", "-i",
                 "--network", "none",
+                "--user", "sandboxuser",
                 "--memory", "256m",
+                "--memory-swap", "256m",
                 "--cpus", "1.0",
+                "--pids-limit", "64",
+                "--read-only",
+                "--cap-drop", "ALL",
+                "--security-opt", "no-new-privileges:true",
+                "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m",
                 "-e", f"BOT_FILE=/sandbox/{bot_filename}",
                 "-e", "PYTHONPATH=/sandbox",
                 "-v", f"{self.bot_dir}:/sandbox:ro",

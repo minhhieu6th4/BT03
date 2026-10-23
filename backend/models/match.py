@@ -39,6 +39,7 @@ class Match(Base):
     points_awarded = Column(Boolean, default=False, nullable=False)
 
     status = Column(String(50), default="PENDING") # PENDING, PLAYING, COMPLETED, CANCELLED
+    queue_job_id = Column(String(100), nullable=True, index=True)
     created_at = Column(DateTime, server_default=func.now())
 
     red_user = relationship("User", foreign_keys=[red_user_id])

@@ -8,35 +8,35 @@ from backend.database.base import Base
 logger = logging.getLogger("uvicorn.error")
 
 def init_engine():
-    """
-    Khởi tạo engine kết nối Database với cơ chế Fail-Safe:
-    1. Thử kết nối MySQL theo settings.DATABASE_URL hoặc Docker MySQL (port 3307/3306).
-    2. Nếu MySQL chưa bật hoặc lỗi kết nối, tự động chuyển sang SQLite
-       để toàn bộ hệ thống API vẫn chạy mượt mà 100% không bị gián đoạn!
-    """
-    candidate_urls = [
-        settings.DATABASE_URL,
-        "mysql+mysqlconnector://root:password@localhost:3307/uet_algorithm_battle",
-        "mysql+mysqlconnector://root:password@localhost:3306/uet_algorithm_battle",
-    ]
-    for url in candidate_urls:
-        if not url:
-            continue
-        try:
-            mysql_engine = create_engine(url, pool_pre_ping=True)
-            with mysql_engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            print(f"[DATABASE] Ket noi MySQL thanh cong tai: {url.split('@')[-1]}!")
-            return mysql_engine
-        except Exception:
-            pass
+    url = settings.DATABASE_URL
+    is_production = settings.ENVIRONMENT.lower() == "production"
+    if is_production and url.startswith("sqlite"):
+        raise RuntimeError("Production requires a shared database; SQLite is not supported.")
 
-    print("[DATABASE INFO] Chua bat MySQL. Tu dong chuyen sang SQLite (uet_algorithm_battle.db) de dam bao he thong hoat dong ngay lap tuc!")
-    sqlite_engine = create_engine(
-        settings.SQLITE_FALLBACK_URL,
-        connect_args={"check_same_thread": False}
-    )
-    return sqlite_engine
+    if url.startswith("sqlite"):
+        return create_engine(url, connect_args={"check_same_thread": False})
+
+    try:
+        database_engine = create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+            pool_recycle=settings.DATABASE_POOL_RECYCLE_SECONDS,
+        )
+        with database_engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return database_engine
+    except Exception as exc:
+        if is_production:
+            raise RuntimeError("Production database is unavailable; refusing SQLite fallback.") from exc
+
+        logger.warning("Configured database is unavailable; using local SQLite for development.")
+        return create_engine(
+            settings.SQLITE_FALLBACK_URL,
+            connect_args={"check_same_thread": False},
+        )
 
 engine = init_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -73,6 +73,10 @@ def auto_migrate():
 
         # Nâng cấp bổ sung cột cho rooms và matches nếu chưa có (tương thích cả SQLite và MySQL)
         columns_to_add = [
+            ("users", "is_active", "BOOLEAN DEFAULT 1"),
+            ("users", "email_verified", "BOOLEAN DEFAULT 0"),
+            ("teams", "owner_id", "INTEGER"),
+            ("team_members", "role", "VARCHAR(20) DEFAULT 'MEMBER'"),
             ("rooms", "player1_bot_id", "INTEGER"),
             ("rooms", "player2_bot_id", "INTEGER"),
             ("rooms", "player1_bot_version_id", "INTEGER"),
@@ -93,6 +97,7 @@ def auto_migrate():
             ("matches", "initial_board_json", "TEXT"),
             ("matches", "total_turns", "INTEGER DEFAULT 0"),
             ("matches", "points_awarded", "BOOLEAN DEFAULT 0"),
+            ("matches", "queue_job_id", "VARCHAR(100)"),
             ("tournaments", "min_participants", "INTEGER DEFAULT 4"),
             ("tournaments", "max_participants", "INTEGER DEFAULT 32"),
             ("tournament_participants", "bot_id", "INTEGER"),
@@ -106,6 +111,7 @@ def auto_migrate():
             ("tournament_matches", "player1_joined_at", "DATETIME"),
             ("tournament_matches", "player2_joined_at", "DATETIME"),
             ("tournament_matches", "result_reason", "VARCHAR(255)"),
+            ("tournament_matches", "queue_job_id", "VARCHAR(100)"),
         ]
         with engine.connect() as conn:
             for table, col, col_type in columns_to_add:

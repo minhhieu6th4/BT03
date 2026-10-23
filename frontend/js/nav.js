@@ -1,5 +1,5 @@
-const API_BASE = window.location.origin.includes('5500')
-    ? window.location.origin.replace(':5500', ':5000')
+const API_BASE = ['5500', '5501'].includes(window.location.port)
+    ? `${window.location.protocol}//${window.location.hostname}:5000`
     : (window.location.protocol === 'file:' ? 'http://127.0.0.1:5000' : window.location.origin);
 
 function getAuthToken() {
@@ -9,6 +9,46 @@ function getAuthToken() {
 function authHeaders() {
     const token = getAuthToken();
     return token ? { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+
+function addNavLink(id, href, label) {
+    const nav = document.querySelector('header nav');
+    if (!nav || document.getElementById(id)) return;
+    const link = document.createElement('a');
+    link.id = id;
+    link.href = href;
+    link.textContent = label;
+    nav.appendChild(link);
+}
+
+async function refreshNotificationBadge() {
+    if (!getAuthToken()) return;
+    try {
+        const response = await fetch(`${API_BASE}/api/notifications/?limit=1`, { headers: authHeaders() });
+        if (!response.ok) return;
+        const data = await response.json();
+        const link = document.getElementById('navNotificationsLink');
+        if (link) link.textContent = data.unread_count ? `Thông báo (${data.unread_count})` : 'Thông báo';
+    } catch (_) {}
+}
+
+function connectNotificationStream() {
+    const token = getAuthToken();
+    if (!token || window.notificationSocket) return;
+    const socketUrl = `${API_BASE.replace(/^http/, 'ws')}/api/notifications/ws`;
+    const socket = new WebSocket(socketUrl);
+    window.notificationSocket = socket;
+    socket.addEventListener('open', () => socket.send(JSON.stringify({token})));
+    socket.addEventListener('message', event => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'notification') refreshNotificationBadge();
+        } catch (_) {}
+    });
+    socket.addEventListener('close', () => {
+        window.notificationSocket = null;
+        if (getAuthToken()) window.setTimeout(connectNotificationStream, 5000);
+    });
 }
 
 function initNav() {
@@ -22,6 +62,11 @@ function initNav() {
         if (navLoginBtn) navLoginBtn.style.display = 'none';
         if (navLogoutBtn) navLogoutBtn.style.display = 'inline';
         if (navProfileLink) navProfileLink.style.display = 'inline';
+        addNavLink('navTeamsLink', 'teams.html', 'Đội của tôi');
+        addNavLink('navNotificationsLink', 'notifications.html', 'Thông báo');
+        refreshNotificationBadge();
+        connectNotificationStream();
+        window.setInterval(refreshNotificationBadge, 15000);
 
         fetch(`${API_BASE}/api/users/profile`, { headers: authHeaders() })
             .then(res => {
@@ -34,8 +79,14 @@ function initNav() {
             .then(data => {
                 if (data && data.username && navUserInfo) {
                     navUserInfo.style.display = 'inline-flex';
-                    navUserInfo.innerHTML = `<span style="background: #0ea5e9; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 0.85rem; font-weight: bold;">👤 ${data.username} | ⭐ ${data.total_points}đ (Rank #${data.server_rank})</span>`;
+                    navUserInfo.textContent = `👤 ${data.username} | ⭐ ${data.total_points}đ (Rank #${data.server_rank})`;
                 }
+            })
+            .catch(() => {});
+        fetch(`${API_BASE}/api/users/me`, { headers: authHeaders() })
+            .then(res => res.ok ? res.json() : null)
+            .then(user => {
+                if (user?.is_admin) addNavLink('navAdminLink', 'admin.html', 'Quản trị');
             })
             .catch(() => {});
     } else {

@@ -79,6 +79,65 @@
                 </div>
             </div>
 
+            <section style="margin-top:28px">
+                <h3>Thống kê theo Bot và giải đấu</h3>
+                <div class="grid-2">
+                    <div><h4>Bot đã sử dụng</h4><div id="botStats"></div></div>
+                    <div><h4>Giải đấu đã tham gia</h4><div id="tournamentStats"></div></div>
+                </div>
+            </section>
+
+            <section style="margin-top:28px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                    <h3>Lịch sử trận đấu</h3>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <select id="historyResult" aria-label="Lọc kết quả">
+                            <option value="">Mọi kết quả</option><option value="win">Thắng</option>
+                            <option value="draw">Hòa</option><option value="loss">Thua</option>
+                        </select>
+                        <select id="historyType" aria-label="Lọc chế độ">
+                            <option value="">Mọi chế độ</option><option value="REGULAR">Đấu thường</option>
+                            <option value="TOURNAMENT">Giải đấu</option>
+                        </select>
+                        <button class="btn btn-outline" type="button" onclick="loadHistory(0)">Lọc</button>
+                    </div>
+                </div>
+                <p id="historyStatus" role="status"></p>
+                <div style="overflow-x:auto">
+                    <table><thead><tr><th>Trận</th><th>Ngày</th><th>Đối thủ</th><th>Kết quả</th><th>Lượt</th><th>Replay</th></tr></thead>
+                        <tbody id="historyRows"></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-outline" id="historyMore" type="button" onclick="loadHistory(historyOffset + 20)" hidden>Tải thêm</button>
+            </section>
+
+            <section style="margin-top:28px">
+                <h3>Cài đặt tài khoản</h3>
+                <form id="profileForm" class="card" style="max-width:560px;display:grid;gap:10px">
+                    <label>Tên người chơi <input id="editUsername" required minlength="3" maxlength="50"></label>
+                    <label>Email <input id="editEmail" type="email" required></label>
+                    <button class="btn btn-primary">Cập nhật hồ sơ</button>
+                </form>
+                <form id="passwordForm" class="card" style="max-width:560px;display:grid;gap:10px;margin-top:12px">
+                    <label>Mật khẩu hiện tại <input id="currentPassword" type="password" required></label>
+                    <label>Mật khẩu mới <input id="newPassword" type="password" minlength="8" maxlength="72" required></label>
+                    <button class="btn btn-outline">Đổi mật khẩu</button>
+                </form>
+                <p id="accountStatus" role="status"></p>
+            </section>
+
+            <section style="margin-top:28px">
+                <h3>Gửi báo cáo</h3>
+                <form id="reportForm" class="card" style="max-width:640px;display:grid;gap:10px">
+                    <label>ID người chơi (nếu có) <input id="reportUserId" type="number" min="1"></label>
+                    <label>ID trận đấu (nếu có) <input id="reportMatchId" type="number" min="1"></label>
+                    <label>Lý do <input id="reportReason" required minlength="3" maxlength="80"></label>
+                    <label>Chi tiết <textarea id="reportDetails" required minlength="10" maxlength="2000" rows="4"></textarea></label>
+                    <button class="btn btn-outline">Gửi báo cáo</button>
+                </form>
+                <p id="reportStatus" role="status"></p>
+            </section>
+
             <!-- Quy tắc tính điểm và xếp hạng minh bạch -->
             <div class="card" style="margin-top: 28px; background: #f8fafc;">
                 <h4 style="margin-top: 0; color: #0f172a;">📜 Quy Tắc Tính Điểm & Xếp Hạng Toàn Server</h4>
@@ -117,11 +176,114 @@
                     document.getElementById('profWins').innerText = data.wins;
                     document.getElementById('profDraws').innerText = data.draws;
                     document.getElementById('profLosses').innerText = data.losses;
+                    document.getElementById('editUsername').value = data.username;
+                    loadHistory(0, data.user_id);
+                    loadMatchStats();
+                    fetch(`${API_BASE}/api/users/me`, {headers:authHeaders()})
+                        .then(response => response.json())
+                        .then(account => { document.getElementById('editEmail').value = account.email || ''; });
                 })
                 .catch(() => {
                     document.getElementById('authPrompt').style.display = 'block';
                 });
         });
+
+            let historyOffset = 0;
+            const historyPageSize = 20;
+            let profileUserId = null;
+            const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+            async function loadHistory(offset = 0, userId = profileUserId) {
+                if (!userId) {
+                    const profileResponse = await fetch(`${API_BASE}/api/users/profile`, {headers:authHeaders()});
+                    if (!profileResponse.ok) return;
+                    userId = (await profileResponse.json()).user_id;
+                }
+                profileUserId = userId;
+                historyOffset = offset;
+                const params = new URLSearchParams({player_id:userId, offset, limit:historyPageSize, status:'COMPLETED'});
+                const result = document.getElementById('historyResult').value;
+                const type = document.getElementById('historyType').value;
+                if (result) params.set('result', result);
+                if (type) params.set('match_type', type);
+                try {
+                    const response = await fetch(`${API_BASE}/api/matches/?${params}`);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.detail || 'Không tải được lịch sử');
+                    const rows = data.items.map(match => {
+                        const opponent = match.red_user_id === userId ? match.blue_username : match.red_username;
+                        const resultText = match.is_draw ? 'Hòa' : match.winner_user_id === userId ? 'Thắng' : match.winner_user_id ? 'Thua' : match.status;
+                        return `<tr><td>#${match.id}</td><td>${match.created_at ? new Date(match.created_at).toLocaleString('vi-VN') : '-'}</td><td>${esc(opponent || 'Đối thủ')}</td><td>${esc(resultText)}</td><td>${match.total_turns || 0}</td><td><button class="btn btn-outline" onclick="viewHistoryReplay(${match.id})">Xem</button></td></tr>`;
+                    }).join('');
+                    document.getElementById('historyRows').innerHTML = offset ? document.getElementById('historyRows').innerHTML + rows : rows;
+                    document.getElementById('historyStatus').textContent = data.total ? `${data.total} trận` : 'Chưa có trận phù hợp.';
+                    document.getElementById('historyMore').hidden = offset + data.items.length >= data.total;
+                } catch (error) {
+                    document.getElementById('historyStatus').textContent = error.message;
+                }
+            }
+
+            async function viewHistoryReplay(matchId) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/matches/${matchId}/replay`);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.detail || 'Không tải được replay');
+                    const dialog = document.createElement('dialog');
+                    dialog.innerHTML = `<form method="dialog" style="max-width:min(900px,90vw);max-height:80vh;overflow:auto"><h3>Replay trận #${matchId}</h3><p>${esc(data.red_team)} vs ${esc(data.blue_team)} · ${data.total_turns || 0} lượt</p><pre style="white-space:pre-wrap">${esc(JSON.stringify(data.moves, null, 2))}</pre><button class="btn btn-primary">Đóng</button></form>`;
+                    document.body.appendChild(dialog);
+                    dialog.showModal();
+                    dialog.addEventListener('close', () => dialog.remove(), {once:true});
+                } catch (error) { alert(error.message); }
+            }
+
+            async function loadMatchStats() {
+                const response = await fetch(`${API_BASE}/api/users/me/match-stats`, {headers:authHeaders()});
+                if (!response.ok) return;
+                const data = await response.json();
+                const render = items => items.map(item => `<div class="card" style="margin:8px 0"><strong>${esc(item.bot_name || item.tournament_name)}</strong><div>${item.matches} trận · ${item.wins} thắng · ${item.losses} thua${item.draws !== undefined ? ` · ${item.draws} hòa` : ''}</div></div>`).join('') || '<p>Chưa có dữ liệu.</p>';
+                document.getElementById('botStats').innerHTML = render(data.by_bot);
+                document.getElementById('tournamentStats').innerHTML = render(data.by_tournament);
+            }
+
+            document.getElementById('profileForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                const payload = {username:document.getElementById('editUsername').value.trim(), email:document.getElementById('editEmail').value.trim()};
+                const response = await fetch(`${API_BASE}/api/users/me`, {method:'PATCH', headers:authHeaders(), body:JSON.stringify(payload)});
+                const data = await response.json();
+                document.getElementById('accountStatus').textContent = response.ok ? 'Hồ sơ đã cập nhật. Nếu đổi email, hãy xác minh địa chỉ mới.' : (data.detail || 'Không thể cập nhật hồ sơ.');
+                if (response.ok && data.email_verified === false) {
+                    const verification = await fetch(`${API_BASE}/api/auth/verification/request`, {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({email:data.email})
+                    });
+                    if (!verification.ok) document.getElementById('accountStatus').textContent += ' Chưa gửi được liên kết xác minh.';
+                }
+            });
+
+            document.getElementById('passwordForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                const response = await fetch(`${API_BASE}/api/auth/password/change`, {method:'POST', headers:authHeaders(), body:JSON.stringify({current_password:document.getElementById('currentPassword').value, new_password:document.getElementById('newPassword').value})});
+                const data = await response.json();
+                document.getElementById('accountStatus').textContent = data.message || data.detail || 'Không thể đổi mật khẩu.';
+                if (response.ok) event.target.reset();
+            });
+
+            document.getElementById('reportForm').addEventListener('submit', async event => {
+                event.preventDefault();
+                const reportedUser = document.getElementById('reportUserId').value;
+                const matchId = document.getElementById('reportMatchId').value;
+                if (!reportedUser && !matchId) {
+                    document.getElementById('reportStatus').textContent = 'Nhập ID người chơi hoặc trận đấu cần báo cáo.';
+                    return;
+                }
+                const payload = {reason:document.getElementById('reportReason').value.trim(), details:document.getElementById('reportDetails').value.trim()};
+                if (reportedUser) payload.reported_user_id = Number(reportedUser);
+                if (matchId) payload.match_id = Number(matchId);
+                const response = await fetch(`${API_BASE}/api/reports/`, {method:'POST', headers:authHeaders(), body:JSON.stringify(payload)});
+                const data = await response.json();
+                document.getElementById('reportStatus').textContent = data.message || data.detail || 'Không thể gửi báo cáo.';
+                if (response.ok) event.target.reset();
+            });
     </script>
 </body>
 </html>

@@ -2,12 +2,15 @@ import os
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from fastapi import HTTPException
 
 from backend.models.room import Room, RoomJoinRequest
 from backend.models.user import User
 from backend.models.match import Match
 from backend.models.bot import Bot, BotVersion
+from backend.services.notification_service import NotificationService
+from backend.services.match_queue import enqueue_or_run_inline
 from backend.schemas.room import RoomResponse, RoomJoinRequestResponse
 from backend.services.player_service import PlayerService
 
@@ -124,12 +127,14 @@ class RoomService:
         return new_room
 
     @staticmethod
-    def list_open_rooms(db: Session) -> List[RoomResponse]:
+    def list_open_rooms(db: Session, offset: int = 0, limit: int = 100) -> List[RoomResponse]:
         """Danh sách các phòng đang mở (WAITING) và còn chỗ trống (1/2 người)"""
         rooms = (
             db.query(Room)
             .filter(Room.status == "WAITING", Room.player2_id == None)
             .order_by(Room.created_at.desc())
+            .offset(offset)
+            .limit(limit)
             .all()
         )
         return [RoomService._to_response(db, r) for r in rooms]
@@ -179,6 +184,11 @@ class RoomService:
 
         req = RoomJoinRequest(room_id=room.id, user_id=user.id, status="PENDING")
         db.add(req)
+        NotificationService.create(
+            db, room.owner_id, "ROOM_JOIN_REQUEST", "Yêu cầu vào phòng",
+            f"{user.username} muốn tham gia phòng {room.name}.",
+            f"room_detail.html?id={room.id}",
+        )
         db.commit()
         db.refresh(req)
 
@@ -221,6 +231,11 @@ class RoomService:
         action_upper = action.strip().upper()
         if action_upper == "REJECT":
             req.status = "REJECTED"
+            NotificationService.create(
+                db, req.user_id, "ROOM_JOIN_REJECTED", "Yêu cầu vào phòng bị từ chối",
+                f"Chủ phòng {room.name} đã từ chối yêu cầu tham gia của bạn.",
+                f"room_detail.html?id={room.id}",
+            )
             db.commit()
             return RoomService._to_response(db, room, owner.id)
 
@@ -243,6 +258,12 @@ class RoomService:
             )
             for r in other_pending:
                 r.status = "REJECTED"
+
+            NotificationService.create(
+                db, req.user_id, "ROOM_JOIN_ACCEPTED", "Bạn đã được vào phòng",
+                f"Chủ phòng đã chấp nhận bạn vào phòng {room.name}.",
+                f"room_detail.html?id={room.id}",
+            )
 
             db.commit()
             db.refresh(room)
@@ -429,6 +450,15 @@ class RoomService:
             room.status = "FINISHED"
             room.player1_ready = False
             room.player2_ready = False
+        winner = db.query(User).filter(User.id == winner_user_id).first() if winner_user_id else None
+        result_text = "hòa" if is_draw else f"{winner.username if winner else 'Đối thủ'} thắng"
+        for participant_id in (match.red_user_id, match.blue_user_id):
+            if participant_id:
+                NotificationService.create(
+                    db, participant_id, "MATCH_COMPLETED", "Trận đấu đã kết thúc",
+                    f"Trận #{match.id} đã hoàn tất: {result_text}.",
+                    f"room_detail.html?id={room.id}" if room else None,
+                )
 
         db.commit()
 
@@ -447,6 +477,8 @@ class RoomService:
 
         if not room.player1_ready or not room.player2_ready:
             raise HTTPException(status_code=400, detail="Cả hai người chơi phải cùng Sẵn sàng trước khi bắt đầu")
+        if room.status != "READY" or room.current_match_id is not None:
+            raise HTTPException(status_code=409, detail="Phòng đã bắt đầu hoặc không còn ở trạng thái sẵn sàng")
 
         if not room.player1_bot_id or not room.player2_bot_id:
             raise HTTPException(status_code=400, detail="Cả hai người chơi phải cùng chọn một Bot hợp lệ!")
@@ -461,19 +493,42 @@ class RoomService:
             blue_bot_id=room.player2_bot_id,
             red_bot_version_id=room.player1_bot_version_id,
             blue_bot_version_id=room.player2_bot_version_id,
-            status="PLAYING",
+            status="QUEUED",
             points_awarded=False
         )
         db.add(match)
         db.flush()
-
-        room.status = "PLAYING"
-        room.current_match_id = match.id
+        claimed = db.execute(
+            update(Room)
+            .where(
+                Room.id == room.id,
+                Room.status == "READY",
+                Room.current_match_id.is_(None),
+            )
+            .values(status="PLAYING", current_match_id=match.id)
+        ).rowcount
+        if claimed != 1:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Phòng đã được bắt đầu bởi yêu cầu khác")
         db.commit()
+        db.refresh(room)
         db.refresh(match)
 
-        # Chạy trận đấu tự động giữa 2 Bot qua GameEngine Sandbox
-        RoomService._execute_bot_match(db, match.id)
+        try:
+            job_id = enqueue_or_run_inline(
+                "backend.jobs.run_room_match",
+                (match.id,),
+                lambda: RoomService._execute_bot_match(db, match.id),
+            )
+        except HTTPException:
+            match.status = "FAILED"
+            match.termination_reason = "Không thể đưa trận đấu vào hàng đợi"
+            room.status = "FAILED"
+            db.commit()
+            raise
+        if job_id:
+            match.queue_job_id = job_id
+            db.commit()
         db.refresh(match)
         return match
 

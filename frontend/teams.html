@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý đội - UET Algorithm Battle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">UET Algorithm Battle</a></h1>
+        <nav>
+            <a href="index.html">Trang Chủ</a><a href="rooms.html">Thi Đấu</a>
+            <a href="tournaments.html">Giải Đấu</a><a href="ranking.html">Xếp Hạng</a>
+            <a href="profile.html" id="navProfileLink" style="display:none">Hồ Sơ</a>
+            <span id="navUserInfo" style="display:none"></span>
+            <a href="login.html" id="navLoginBtn">Đăng Nhập</a>
+            <a href="#" id="navLogoutBtn" style="display:none" onclick="logout()">Đăng Xuất</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Đội của tôi</h2>
+        <form id="createTeamForm" style="display:flex;gap:8px;max-width:520px;flex-wrap:wrap">
+            <input id="teamName" required maxlength="100" placeholder="Tên đội" aria-label="Tên đội">
+            <button class="btn btn-primary" type="submit">Tạo đội</button>
+        </form>
+        <p id="teamStatus" role="status"></p>
+        <section id="myTeams"></section>
+        <h2>Danh sách đội</h2>
+        <section id="allTeams"></section>
+    </main>
+    <script src="js/nav.js"></script>
+    <script>
+        const teamStatus = document.getElementById('teamStatus');
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+        async function api(path, options = {}) {
+            const response = await fetch(`${API_BASE}/api/teams${path}`, {headers:authHeaders(), ...options});
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Yêu cầu không thành công');
+            return data;
+        }
+
+        function renderTeams(teams, target) {
+            target.innerHTML = teams.map(team => `<article class="card" style="margin:12px 0">
+                <strong>${esc(team.name)}</strong> <span>#${team.id}</span>
+                <div>${team.members ? team.members.map(member => `<div>${esc(member.username)} · ${esc(member.role)} ${member.user_id === team.owner_id ? '' : `<button class="btn btn-outline" onclick="removeMember(${team.id},${member.user_id})">Xóa</button>`}</div>`).join('') : ''}</div>
+                ${team.owner_id === window.currentUserId ? `<form onsubmit="addMember(event,${team.id})" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input type="number" min="1" name="user_id" required placeholder="ID người chơi"><button class="btn btn-outline">Thêm thành viên</button><button type="button" class="btn btn-outline" onclick="transferOwner(${team.id})">Chuyển chủ đội</button></form>` : ''}
+            </article>`).join('') || '<p>Chưa có đội.</p>';
+        }
+
+        async function loadTeams() {
+            try {
+                const [mine, all, me] = await Promise.all([api('/mine'), api('/'), fetch(`${API_BASE}/api/users/me`, {headers:authHeaders()}).then(res => res.json())]);
+                window.currentUserId = me.id;
+                const details = await Promise.all(mine.map(team => api(`/${team.id}`)));
+                renderTeams(details, document.getElementById('myTeams'));
+                renderTeams(all, document.getElementById('allTeams'));
+            } catch (error) { teamStatus.textContent = error.message; }
+        }
+
+        document.getElementById('createTeamForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                await api('/', {method:'POST', body:JSON.stringify({name:document.getElementById('teamName').value.trim()})});
+                document.getElementById('teamName').value = '';
+                teamStatus.textContent = 'Đã tạo đội.';
+                loadTeams();
+            } catch (error) { teamStatus.textContent = error.message; }
+        });
+
+        async function addMember(event, teamId) {
+            event.preventDefault();
+            try {
+                const userId = Number(new FormData(event.target).get('user_id'));
+                await api(`/${teamId}/members`, {method:'POST', body:JSON.stringify({user_id:userId})});
+                teamStatus.textContent = 'Đã thêm thành viên.';
+                loadTeams();
+            } catch (error) { teamStatus.textContent = error.message; }
+        }
+
+        async function removeMember(teamId, userId) {
+            try { await api(`/${teamId}/members/${userId}`, {method:'DELETE'}); loadTeams(); }
+            catch (error) { teamStatus.textContent = error.message; }
+        }
+
+        async function transferOwner(teamId) {
+            const userId = Number(prompt('ID thành viên sẽ trở thành chủ đội:'));
+            if (!userId) return;
+            try { await api(`/${teamId}/owner`, {method:'PUT', body:JSON.stringify({user_id:userId})}); loadTeams(); }
+            catch (error) { teamStatus.textContent = error.message; }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTeams);
+    </script>
+</body>
+</html>

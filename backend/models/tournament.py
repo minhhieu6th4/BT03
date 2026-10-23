@@ -76,6 +76,7 @@ class TournamentMatch(Base):
     player1_joined_at = Column(DateTime, nullable=True)
     player2_joined_at = Column(DateTime, nullable=True)
     result_reason = Column(String(255), nullable=True)
+    queue_job_id = Column(String(100), nullable=True, index=True)
 
     round = relationship("TournamentRound", back_populates="matches")
     player1 = relationship("User", foreign_keys=[player1_id])

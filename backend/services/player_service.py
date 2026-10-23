@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import and_, desc, or_
 from typing import Optional, List
 from fastapi import HTTPException
 
@@ -26,15 +26,25 @@ class PlayerService:
         Tính thứ hạng trên toàn server:
         Sắp xếp theo: total_points DESC, wins DESC, user_id ASC
         """
-        all_stats = (
-            db.query(PlayerStat)
-            .order_by(desc(PlayerStat.total_points), desc(PlayerStat.wins), PlayerStat.user_id.asc())
-            .all()
-        )
-        for index, s in enumerate(all_stats, start=1):
-            if s.user_id == user_id:
-                return index
-        return len(all_stats) + 1
+        stat = db.query(PlayerStat).filter(PlayerStat.user_id == user_id).first()
+        if not stat:
+            return db.query(PlayerStat).count() + 1
+
+        higher_ranked = db.query(PlayerStat.user_id).filter(
+            or_(
+                PlayerStat.total_points > stat.total_points,
+                and_(
+                    PlayerStat.total_points == stat.total_points,
+                    PlayerStat.wins > stat.wins,
+                ),
+                and_(
+                    PlayerStat.total_points == stat.total_points,
+                    PlayerStat.wins == stat.wins,
+                    PlayerStat.user_id < user_id,
+                ),
+            )
+        ).count()
+        return higher_ranked + 1
 
     @staticmethod
     def get_player_profile(db: Session, user: User) -> PlayerStatResponse:
@@ -115,9 +125,25 @@ class PlayerService:
         - Hiển thị: rank, user_id, username, total_matches, wins, draws, losses, total_points, win_rate
         """
         # Đảm bảo mọi user đều có bản ghi trong player_stats
-        users = db.query(User).all()
-        for u in users:
-            PlayerService.get_or_create_stats(db, u.id)
+        user_ids = {row[0] for row in db.query(User.id).all()}
+        existing_ids = {row[0] for row in db.query(PlayerStat.user_id).all()}
+        missing_ids = user_ids - existing_ids
+        if missing_ids:
+            db.bulk_insert_mappings(
+                PlayerStat,
+                [
+                    {
+                        "user_id": user_id,
+                        "total_matches": 0,
+                        "wins": 0,
+                        "draws": 0,
+                        "losses": 0,
+                        "total_points": 0,
+                    }
+                    for user_id in missing_ids
+                ],
+            )
+            db.commit()
 
         stats = (
             db.query(PlayerStat, User.username)

@@ -8,4 +8,5 @@ RUN useradd -m -s /bin/bash sandboxuser
 WORKDIR /sandbox
 
 # Command mặc định sẽ bị ghi đè lúc docker run
+USER sandboxuser
 CMD ["python", "/runner.py"]

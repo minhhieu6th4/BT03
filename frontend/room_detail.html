@@ -181,6 +181,7 @@
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="margin: 0 0 6px 0;" id="arenaTitle">⚔️ Đại Chiến 2 Bot Tự Động</h2>
                 <p id="arenaSubtitle" style="color: #64748b; margin: 0;">Hai bot đang tự động điều khiển quân cờ trong Sandbox. Bàn cờ chỉ hiển thị (Spectator Mode).</p>
+                <p id="arenaLiveStatusBox" role="status" style="margin: 8px 0 0; font-weight: 600;"></p>
             </div>
 
             <!-- Banner kết quả / sự kiện lượt đi -->
@@ -357,6 +358,8 @@
                             startAutoPlay();
                         }
                     }
+                } else if (currentRoom.status === 'FAILED') {
+                    await loadMatchState();
                 }
             } catch (err) {
                 console.error(err);
@@ -726,6 +729,14 @@
                 initialBoard = state.initial_board || [];
                 matchMoves = state.moves || [];
 
+                const statusLabels = {
+                    QUEUED: 'Trận đã vào hàng đợi, đang chờ worker.',
+                    PLAYING: 'Bot đang thi đấu.',
+                    FAILED: state.termination_reason || 'Worker không thể chạy trận.',
+                    COMPLETED: 'Trận đấu đã hoàn tất.'
+                };
+                document.getElementById('arenaLiveStatusBox').innerText = statusLabels[state.status] || state.status;
+
                 document.getElementById('battleArenaSection').style.display = 'block';
                 document.getElementById('arenaTitle').innerText = `⚔️ ${state.red_username} (${state.red_bot_name} v${state.red_bot_version}) VS ${state.blue_username} (${state.blue_bot_name} v${state.blue_bot_version})`;
 
@@ -973,15 +984,15 @@
                 })
                 .catch(() => loadRoom());
 
-            // Tự động kiểm tra và đồng bộ trạng thái phòng mỗi 1.5s
+            // Poll slowly while queued; the final replay is loaded when the worker completes.
             setInterval(() => {
-                if (!currentRoom || currentRoom.status !== 'FINISHED') {
+                if (!currentRoom || !['FINISHED', 'FAILED'].includes(currentRoom.status)) {
                     if (myReadyBots.length === 0 && (currentRoom?.my_role === 'PLAYER1' || currentRoom?.my_role === 'PLAYER2')) {
                         loadMyReadyBots();
                     }
                     loadRoom();
                 }
-            }, 1500);
+            }, 5000);
         });
     </script>
 </body>

@@ -196,15 +196,62 @@ class Bot:
 
 ---
 
+### 6. 👥 Hồ Sơ, Đội Nhóm & Lịch Sử Thi Đấu
+- Cập nhật username/email, đổi mật khẩu, xác minh email và khôi phục mật khẩu qua liên kết một lần có hạn dùng.
+- Quản lý thành viên đội, chủ đội và chuyển quyền chủ đội.
+- Hồ sơ có thống kê theo Bot/giải đấu, lịch sử trận có bộ lọc, phân trang và xem replay.
+
+### 7. 🔔 Thông Báo & Quản Trị
+- Thông báo riêng theo người dùng, cập nhật realtime qua WebSocket và polling dự phòng.
+- Gửi báo cáo về người chơi/trận đấu.
+- Admin xử lý báo cáo, khóa/mở khóa tài khoản và theo dõi trận đấu/giải đấu.
+- Các chức năng quản trị luôn được kiểm tra quyền ở backend.
+
+### 8. ✉️ Cấu Hình Email & Admin
+SMTP tùy chọn được cấu hình bằng biến môi trường `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_USE_TLS`. Đặt `FRONTEND_BASE_URL` trỏ đến root đang phục vụ thư mục frontend để liên kết xác minh/đặt lại mật khẩu hoạt động đúng (mặc định `http://127.0.0.1:5500`). Đặt `EMAIL_VERIFICATION_REQUIRED=true` để bắt buộc xác minh trước khi đăng nhập.
+
+Để cấp admin đầu tiên, cập nhật cờ `is_admin` cho tài khoản tin cậy trong database, ví dụ: `UPDATE users SET is_admin = 1 WHERE username = 'admin';` rồi đăng nhập và mở `frontend/admin.html`.
+
 ## 🧪 Kiểm Thử Tự Động (Unit & Integration Tests)
 
-Dự án đi kèm bộ **62 bài kiểm thử tự động** bao phủ toàn bộ Game Engine, Bot Validator, Sandbox, Phòng đấu PvP, Bảng xếp hạng và Giải đấu Knockout (bao gồm xử lý BYE, duyệt đơn, điểm danh và xử thua `FORFEIT`).
+Dự án đi kèm bộ kiểm thử tự động bao phủ Game Engine, Bot Validator, Sandbox, Phòng đấu PvP, bảng xếp hạng, giải đấu Knockout và các luồng hồ sơ, lịch sử, thành viên đội, thông báo, báo cáo và phân quyền admin.
 
 Chạy toàn bộ kiểm thử bằng lệnh:
 
 ```bash
 python -m pytest
 ```
+
+## ⚙️ Chạy API và worker cho tải đồng thời
+
+Trận đấu được đưa vào Redis Queue thay vì chạy trong request API khi `MATCH_EXECUTION_MODE=queued`. API trả `QUEUED` cùng `match_id`; trạng thái có thể đọc qua `GET /api/matches/{match_id}/status` hoặc trạng thái phòng/giải. Worker chạy trong process riêng:
+
+```powershell
+Copy-Item .env.example .env
+# Sửa DATABASE_URL và REDIS_URL trong .env; dùng credentials riêng, không dùng giá trị ví dụ.
+docker compose up -d db redis
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 5000 --workers 4
+python -m backend.worker
+```
+
+Chạy thêm worker trên các process/máy worker khác để tăng số trận chạy đồng thời. Trên Windows, worker dùng `SimpleWorker`, xử lý một job tại một thời điểm; Linux dùng RQ worker. Mỗi worker cần cùng `DATABASE_URL`, `REDIS_URL` và quyền đọc thư mục submissions; nếu sandbox dùng Docker, worker phải truy cập được Docker Engine. Worker/API không nên dùng SQLite khi triển khai production.
+
+Tổng số kết nối DB có thể đạt xấp xỉ `(DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW) × (số process API + số process worker)`. Cấu hình giới hạn tương ứng với `max_connections` của database. Bắt đầu với ít worker, chạy load test, rồi tăng worker theo độ dài hàng đợi và CPU; một trận có thể tiêu thụ tới một CPU cho mỗi bot sandbox.
+
+`ENVIRONMENT=production` buộc dùng database không phải SQLite và không fallback inline khi Redis lỗi. Khi Redis hỏng, API trả `503` để client thử lại; không chạy game trong request. `MATCH_EXECUTION_MODE=auto` chỉ dành cho development/test, nơi Redis offline mới dùng fallback inline.
+
+### Chia sẻ qua Cloudflare Tunnel
+
+Chỉ mở tunnel sau khi production safeguards đã đạt (Docker sandbox image có sẵn, `SECRET_KEY` riêng >= 32 ký tự, MySQL/Redis chạy, `.env` đặt `ENVIRONMENT=production` và `MATCH_EXECUTION_MODE=queued`). Không mở trực tiếp cổng MySQL/Redis ra Internet.
+
+Chạy API chỉ trên loopback và trỏ tunnel vào API; FastAPI đã phục vụ frontend tại `/login.html`, vì vậy chỉ cần chia URL public nhận được kèm `/login.html`:
+
+```powershell
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 5000 --workers 2
+cloudflared tunnel --url http://127.0.0.1:5000
+```
+
+Quick Tunnel URL là tạm thời và đổi sau khi tiến trình dừng. Đặt `FRONTEND_BASE_URL` bằng URL public đang hoạt động trước khi gửi email xác minh/đặt lại mật khẩu. Tắt tunnel nếu không còn chia sẻ.
 
 ---
 
@@ -215,3 +262,4 @@ Xem thêm tài liệu chi tiết trong thư mục [`docs/`](docs/):
 - [`docs/game-rules.md`](docs/game-rules.md) — Đặc tả luật cờ Kéo - Búa - Bao 9x9.
 - [`docs/bot-api.md`](docs/bot-api.md) — Tài liệu API dành cho người lập trình Bot.
 - [`docs/tournament-rules.md`](docs/tournament-rules.md) — Quy chế giải đấu.
+- [`docs/requirements.md`](docs/requirements.md) — Yêu cầu nghiệm thu các luồng bổ sung.

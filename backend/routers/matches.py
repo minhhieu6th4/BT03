@@ -17,7 +17,7 @@ def list_matches():
 
 @router.get("/tree")
 def get_tournament_tree():
-    """Lấy danh sách phân cấp toàn bộ giải đấu từ thư mục match_logs"""
+    """Lấy danh sách phân cấp toàn bộ giải đấu từ thư mục match_logs """
     return ReplayService.get_tournament_tree()
 
 @router.get("/game/{game_id}/replay")

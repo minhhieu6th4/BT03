@@ -373,17 +373,17 @@ def test_two_stage_knockout_private_draft_and_publish_flow(db_session):
 
 
 # ==============================================================
-# 6. KIỂM THỬ HÀNG ĐỢI LƯỢT ĐẤU (WAVES - TỐI ĐA 10 TRẬN/LƯỢT) & CHỌN BOT 3 PHÚT
+# 6. KIỂM THỬ HÀNG ĐỢI LƯỢT ĐẤU (WAVES - TỐI ĐA 5 TRẬN/LƯỢT) & CHỌN BOT 3 PHÚT
 # ==============================================================
 
 def test_tournament_match_waves_queue_and_bot_selection(db_session):
     """
     Kiểm tra hệ thống chia lượt đấu (Waves):
-    - Mỗi lượt đấu tối đa 10 trận song song.
-    - Trận ở lượt 1 ở trạng thái READY với hạn chót 3 phút chọn bot.
-    - Trận ở lượt 2 ở trạng thái WAITING kèm thông tin lượt đấu hiện tại và lượt đấu của mình.
+    - Mỗi lượt đấu tối đa 5 trận song song.
+    - Trận ở lượt 1 ở trạng thái READY với hạn chót 3 phút xem map + 10 phút điểm danh.
+    - Trận ở lượt 2, 3 ở trạng thái WAITING kèm thông tin lượt đấu hiện tại và lượt đấu của mình.
     - Thí sinh có thể chọn bot cho trận đấu trong 3 phút chuẩn bị.
-    - Khi các trận lượt 1 kết thúc, hệ thống tự động đẩy lượt 2 lên READY (3 phút).
+    - Khi các trận lượt 1 kết thúc, hệ thống tự động đẩy lượt 2 lên READY.
     """
     from backend.models.bot import Bot, BotVersion
 
@@ -402,20 +402,27 @@ def test_tournament_match_waves_queue_and_bot_selection(db_session):
     real_matches = [m for m in r1.matches if not m.is_bye]
     assert len(real_matches) == 12  # 28 người -> 4 BYE, 12 trận thật vòng 1
     assert r1.current_wave == 1
-    assert r1.total_waves == 2
+    assert r1.total_waves == 3  # 12 trận thật chia làm 3 lượt (5, 5, 2)
 
-    # 10 trận thật đầu thuộc Lượt 1 (Wave 1) -> READY với 3 phút
-    for i in range(10):
+    # 5 trận thật đầu thuộc Lượt 1 (Wave 1) -> READY với 3 phút xem map + 10 phút điểm danh
+    for i in range(5):
         m = real_matches[i]
         assert m.wave_number == 1
         assert m.status == "READY"
         assert m.participation_deadline is not None
         assert m.is_map_revealed is True
 
-    # 2 trận thật sau thuộc Lượt 2 (Wave 2) -> WAITING
-    for i in range(10, 12):
+    # 5 trận thật tiếp theo thuộc Lượt 2 (Wave 2) -> WAITING
+    for i in range(5, 10):
         m = real_matches[i]
         assert m.wave_number == 2
+        assert m.status == "WAITING"
+        assert m.current_wave == 1
+
+    # 2 trận thật cuối thuộc Lượt 3 (Wave 3) -> WAITING
+    for i in range(10, 12):
+        m = real_matches[i]
+        assert m.wave_number == 3
         assert m.status == "WAITING"
         assert m.current_wave == 1
 
@@ -434,21 +441,19 @@ def test_tournament_match_waves_queue_and_bot_selection(db_session):
     bot_sel_res = TournamentService.select_match_bot(db_session, t.id, m0.id, p1_user, test_bot.id)
     assert bot_sel_res.player1_bot_name == "BotSieucap"
 
-    # Kết thúc tất cả 10 trận ở Lượt 1 -> Hệ thống tự động chuyển sang Lượt 2
-    for i in range(10):
+    # Kết thúc tất cả 5 trận ở Lượt 1 -> Hệ thống tự động chuyển sang Lượt 2
+    for i in range(5):
         TournamentService.play_match(db_session, t.id, real_matches[i].id, winner_id=real_matches[i].player1_id)
 
     # Kiểm tra lại Vòng 1 sau khi Lượt 1 kết thúc
     db_round = db_session.query(TournamentRound).filter(TournamentRound.id == r1.id).first()
     assert db_round.current_wave == 2
 
-    # 2 trận Lượt 2 đã được tự động kích hoạt sang READY với hạn chót 3 phút!
-    m10_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == real_matches[10].id).first()
-    m11_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == real_matches[11].id).first()
-    assert m10_db.status == "READY"
-    assert m10_db.participation_deadline is not None
-    assert m11_db.status == "READY"
-    assert m11_db.participation_deadline is not None
+    # 5 trận Lượt 2 đã được tự động kích hoạt sang READY!
+    for i in range(5, 10):
+        m_db = db_session.query(TournamentMatch).filter(TournamentMatch.id == real_matches[i].id).first()
+        assert m_db.status == "READY"
+        assert m_db.participation_deadline is not None
 
 
 

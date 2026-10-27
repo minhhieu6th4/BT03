@@ -588,7 +588,7 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 14px; flex-wrap: wrap; gap: 10px;">
                     <small style="color: #64748b;">
-                        * Khi bắt đầu, mỗi lượt đấu tối đa 10 trận song song. Người chơi có 3 phút chuẩn bị xem map & chọn bot trước khi thi đấu.
+                        * Khi bắt đầu, mỗi lượt đấu tối đa 5 trận song song. Người chơi có 3 phút chuẩn bị xem map & chọn bot trước khi thi đấu.
                     </small>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-secondary" onclick="closeSetupOverviewModal()">Đóng</button>
@@ -2307,7 +2307,7 @@
         }
 
         function publishTournament() {
-            if (!confirm("XÁC NHẬN BẮT ĐẦU GIẢI ĐẤU VÀ CÔNG BỐ LỊCH ĐẤU?\n\n- Các trận đấu được xếp theo lượt (tối đa 10 trận song song/lượt).\n- Lượt 1 sẽ bắt đầu ngay với 3 phút để người chơi xem map và chọn bot.\n- Những trận host không chỉ định map sẽ dùng map mặc định 9×9.")) return;
+            if (!confirm("XÁC NHẬN BẮT ĐẦU GIẢI ĐẤU VÀ CÔNG BỐ LỊCH ĐẤU?\n\n- Các trận đấu được xếp theo lượt (tối đa 5 trận song song/lượt).\n- Lượt 1 sẽ bắt đầu ngay với 3 phút để người chơi xem map và chọn bot.\n- Những trận host không chỉ định map sẽ dùng map mặc định 9×9.")) return;
 
             fetch(`${API_BASE}/api/tournaments/${tournId}/publish`, {
                 method: 'POST',

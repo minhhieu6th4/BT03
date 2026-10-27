@@ -1,0 +1,686 @@
+[
+  {
+    "total_requests": 1,
+    "success_count": 1,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 1
+    },
+    "duration_sec": 0.07976240000061807,
+    "rps": 12.537235589604263,
+    "min_ms": 79.51460000003863,
+    "max_ms": 79.51460000003863,
+    "avg_ms": 79.51460000003863,
+    "p50_ms": 79.51460000003863,
+    "p90_ms": 79.51460000003863,
+    "p95_ms": 79.51460000003863,
+    "p99_ms": 79.51460000003863,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 79.51460000003863,
+        "body": "{\"id\":18,\"room_id\":21,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:52:57\"}",
+        "error": null
+      }
+    ],
+    "room_status": "WAITING",
+    "player1_id": 46,
+    "player2_id": null,
+    "stage_name": "Stage 1: Smoke Baseline (1 User)",
+    "num_users": 1
+  },
+  {
+    "total_requests": 5,
+    "success_count": 5,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 5
+    },
+    "duration_sec": 0.28923260000010487,
+    "rps": 17.2871246187262,
+    "min_ms": 88.96360000017012,
+    "max_ms": 280.9049999996205,
+    "avg_ms": 193.95258000004105,
+    "p50_ms": 172.23070000000007,
+    "p90_ms": 280.9049999996205,
+    "p95_ms": 280.9049999996205,
+    "p99_ms": 280.9049999996205,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 88.96360000017012,
+        "body": "{\"id\":19,\"room_id\":22,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:01\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 172.23070000000007,
+        "body": "{\"id\":21,\"room_id\":22,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:01\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 280.9049999996205,
+        "body": "{\"id\":22,\"room_id\":22,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:01\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 149.3054000002303,
+        "body": "{\"id\":20,\"room_id\":22,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:01\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 278.3582000001843,
+        "body": "{\"id\":23,\"room_id\":22,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:01\"}",
+        "error": null
+      }
+    ],
+    "room_status": "WAITING",
+    "player1_id": 46,
+    "player2_id": null,
+    "stage_name": "Stage 2: Light Concurrency (5 Users)",
+    "num_users": 5
+  },
+  {
+    "total_requests": 10,
+    "success_count": 10,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 10
+    },
+    "duration_sec": 0.31965560000026016,
+    "rps": 31.283669048788326,
+    "min_ms": 97.21220000028552,
+    "max_ms": 311.2440000004426,
+    "avg_ms": 222.28975000025457,
+    "p50_ms": 220.52239999993617,
+    "p90_ms": 311.2440000004426,
+    "p95_ms": 311.2440000004426,
+    "p99_ms": 311.2440000004426,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 97.21220000028552,
+        "body": "{\"id\":24,\"room_id\":23,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 187.04080000043177,
+        "body": "{\"id\":25,\"room_id\":23,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 188.36499999997613,
+        "body": "{\"id\":26,\"room_id\":23,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 220.13369999967836,
+        "body": "{\"id\":28,\"room_id\":23,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 311.2440000004426,
+        "body": "{\"id\":33,\"room_id\":23,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_06",
+        "status_code": 200,
+        "latency_ms": 298.7739000000147,
+        "body": "{\"id\":32,\"room_id\":23,\"user_id\":52,\"username\":\"perf_user_06\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_07",
+        "status_code": 200,
+        "latency_ms": 266.78390000051877,
+        "body": "{\"id\":31,\"room_id\":23,\"user_id\":53,\"username\":\"perf_user_07\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_08",
+        "status_code": 200,
+        "latency_ms": 190.97810000039317,
+        "body": "{\"id\":27,\"room_id\":23,\"user_id\":54,\"username\":\"perf_user_08\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_09",
+        "status_code": 200,
+        "latency_ms": 220.91110000019398,
+        "body": "{\"id\":29,\"room_id\":23,\"user_id\":55,\"username\":\"perf_user_09\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_10",
+        "status_code": 200,
+        "latency_ms": 241.4548000006107,
+        "body": "{\"id\":30,\"room_id\":23,\"user_id\":56,\"username\":\"perf_user_10\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:04\"}",
+        "error": null
+      }
+    ],
+    "room_status": "WAITING",
+    "player1_id": 46,
+    "player2_id": null,
+    "stage_name": "Stage 3: Medium Concurrency (10 Users)",
+    "num_users": 10
+  },
+  {
+    "total_requests": 20,
+    "success_count": 20,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 20
+    },
+    "duration_sec": 0.6476216000000932,
+    "rps": 30.882231228848948,
+    "min_ms": 281.21740000005957,
+    "max_ms": 571.1049000001367,
+    "avg_ms": 433.27761499995177,
+    "p50_ms": 413.5246499999994,
+    "p90_ms": 542.3264000000927,
+    "p95_ms": 571.1049000001367,
+    "p99_ms": 571.1049000001367,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 281.21740000005957,
+        "body": "{\"id\":34,\"room_id\":24,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 394.30519999950775,
+        "body": "{\"id\":36,\"room_id\":24,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 399.4266999998217,
+        "body": "{\"id\":37,\"room_id\":24,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 419.98989999956393,
+        "body": "{\"id\":39,\"room_id\":24,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 398.83929999996326,
+        "body": "{\"id\":38,\"room_id\":24,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_06",
+        "status_code": 200,
+        "latency_ms": 475.82340000008116,
+        "body": "{\"id\":45,\"room_id\":24,\"user_id\":52,\"username\":\"perf_user_06\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_07",
+        "status_code": 200,
+        "latency_ms": 409.78160000031494,
+        "body": "{\"id\":40,\"room_id\":24,\"user_id\":53,\"username\":\"perf_user_07\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_08",
+        "status_code": 200,
+        "latency_ms": 411.4337000000887,
+        "body": "{\"id\":41,\"room_id\":24,\"user_id\":54,\"username\":\"perf_user_08\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_09",
+        "status_code": 200,
+        "latency_ms": 542.3264000000927,
+        "body": "{\"id\":51,\"room_id\":24,\"user_id\":55,\"username\":\"perf_user_09\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_10",
+        "status_code": 200,
+        "latency_ms": 491.4169000003312,
+        "body": "{\"id\":49,\"room_id\":24,\"user_id\":56,\"username\":\"perf_user_10\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_11",
+        "status_code": 200,
+        "latency_ms": 571.1049000001367,
+        "body": "{\"id\":53,\"room_id\":24,\"user_id\":57,\"username\":\"perf_user_11\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_12",
+        "status_code": 200,
+        "latency_ms": 501.37530000029074,
+        "body": "{\"id\":50,\"room_id\":24,\"user_id\":58,\"username\":\"perf_user_12\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_13",
+        "status_code": 200,
+        "latency_ms": 386.8008999997983,
+        "body": "{\"id\":42,\"room_id\":24,\"user_id\":59,\"username\":\"perf_user_13\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_14",
+        "status_code": 200,
+        "latency_ms": 472.4250999997821,
+        "body": "{\"id\":46,\"room_id\":24,\"user_id\":60,\"username\":\"perf_user_14\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_15",
+        "status_code": 200,
+        "latency_ms": 292.96309999972436,
+        "body": "{\"id\":35,\"room_id\":24,\"user_id\":61,\"username\":\"perf_user_15\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_16",
+        "status_code": 200,
+        "latency_ms": 381.581599999663,
+        "body": "{\"id\":43,\"room_id\":24,\"user_id\":62,\"username\":\"perf_user_16\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_17",
+        "status_code": 200,
+        "latency_ms": 500.5535999998756,
+        "body": "{\"id\":44,\"room_id\":24,\"user_id\":63,\"username\":\"perf_user_17\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_18",
+        "status_code": 200,
+        "latency_ms": 507.1379999999408,
+        "body": "{\"id\":52,\"room_id\":24,\"user_id\":64,\"username\":\"perf_user_18\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_19",
+        "status_code": 200,
+        "latency_ms": 413.3953999998994,
+        "body": "{\"id\":47,\"room_id\":24,\"user_id\":65,\"username\":\"perf_user_19\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_20",
+        "status_code": 200,
+        "latency_ms": 413.6539000000994,
+        "body": "{\"id\":48,\"room_id\":24,\"user_id\":66,\"username\":\"perf_user_20\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:09\"}",
+        "error": null
+      }
+    ],
+    "room_status": "WAITING",
+    "player1_id": 46,
+    "player2_id": null,
+    "stage_name": "Stage 4: Peak Target Concurrency (20 Users)",
+    "num_users": 20
+  },
+  {
+    "total_requests": 1,
+    "success_count": 1,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 1
+    },
+    "duration_sec": 0.08127960000001622,
+    "rps": 12.30321015359082,
+    "min_ms": 81.05109999996785,
+    "max_ms": 81.05109999996785,
+    "avg_ms": 81.05109999996785,
+    "p50_ms": 81.05109999996785,
+    "p90_ms": 81.05109999996785,
+    "p95_ms": 81.05109999996785,
+    "p99_ms": 81.05109999996785,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 81.05109999996785,
+        "body": "{\"id\":54,\"room_id\":25,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:14\"}",
+        "error": null
+      }
+    ],
+    "stage_name": "Multi-Room Stage 1 (1 User)",
+    "num_users": 1
+  },
+  {
+    "total_requests": 5,
+    "success_count": 5,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 5
+    },
+    "duration_sec": 0.2680294000001595,
+    "rps": 18.65466997276054,
+    "min_ms": 126.60910000067815,
+    "max_ms": 234.04730000038398,
+    "avg_ms": 204.87164000023768,
+    "p50_ms": 221.7129999999088,
+    "p90_ms": 234.04730000038398,
+    "p95_ms": 234.04730000038398,
+    "p99_ms": 234.04730000038398,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 126.60910000067815,
+        "body": "{\"id\":55,\"room_id\":26,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:18\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 218.75660000023345,
+        "body": "{\"id\":56,\"room_id\":27,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:18\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 221.7129999999088,
+        "body": "{\"id\":57,\"room_id\":28,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:18\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 223.232199999984,
+        "body": "{\"id\":58,\"room_id\":29,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:18\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 234.04730000038398,
+        "body": "{\"id\":59,\"room_id\":30,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:18\"}",
+        "error": null
+      }
+    ],
+    "stage_name": "Multi-Room Stage 2 (5 Users)",
+    "num_users": 5
+  },
+  {
+    "total_requests": 10,
+    "success_count": 10,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 10
+    },
+    "duration_sec": 0.41400619999967603,
+    "rps": 24.1542276420204,
+    "min_ms": 185.04630000006728,
+    "max_ms": 372.4584000001414,
+    "avg_ms": 292.8812500001186,
+    "p50_ms": 275.15395000000353,
+    "p90_ms": 372.4584000001414,
+    "p95_ms": 372.4584000001414,
+    "p99_ms": 372.4584000001414,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 185.04630000006728,
+        "body": "{\"id\":60,\"room_id\":31,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:22\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 271.5152000000671,
+        "body": "{\"id\":61,\"room_id\":32,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 357.19539999990957,
+        "body": "{\"id\":67,\"room_id\":33,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 372.4584000001414,
+        "body": "{\"id\":68,\"room_id\":34,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 312.5067000000854,
+        "body": "{\"id\":66,\"room_id\":35,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_06",
+        "status_code": 200,
+        "latency_ms": 261.3098000001628,
+        "body": "{\"id\":62,\"room_id\":36,\"user_id\":52,\"username\":\"perf_user_06\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_07",
+        "status_code": 200,
+        "latency_ms": 275.54740000050515,
+        "body": "{\"id\":63,\"room_id\":37,\"user_id\":53,\"username\":\"perf_user_07\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_08",
+        "status_code": 200,
+        "latency_ms": 271.673400000509,
+        "body": "{\"id\":64,\"room_id\":38,\"user_id\":54,\"username\":\"perf_user_08\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_09",
+        "status_code": 200,
+        "latency_ms": 274.7604999995019,
+        "body": "{\"id\":65,\"room_id\":39,\"user_id\":55,\"username\":\"perf_user_09\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_10",
+        "status_code": 200,
+        "latency_ms": 346.79940000023635,
+        "body": "{\"id\":69,\"room_id\":40,\"user_id\":56,\"username\":\"perf_user_10\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:23\"}",
+        "error": null
+      }
+    ],
+    "stage_name": "Multi-Room Stage 3 (10 Users)",
+    "num_users": 10
+  },
+  {
+    "total_requests": 20,
+    "success_count": 20,
+    "fail_count": 0,
+    "status_counts": {
+      "200": 20
+    },
+    "duration_sec": 0.5067755000000034,
+    "rps": 39.465206980210894,
+    "min_ms": 155.0455000005968,
+    "max_ms": 463.50840000013704,
+    "avg_ms": 328.3393149999938,
+    "p50_ms": 334.6135499996308,
+    "p90_ms": 462.5655999998344,
+    "p95_ms": 463.50840000013704,
+    "p99_ms": 463.50840000013704,
+    "details": [
+      {
+        "username": "perf_user_01",
+        "status_code": 200,
+        "latency_ms": 155.0455000005968,
+        "body": "{\"id\":70,\"room_id\":41,\"user_id\":47,\"username\":\"perf_user_01\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_02",
+        "status_code": 200,
+        "latency_ms": 239.15870000018913,
+        "body": "{\"id\":71,\"room_id\":42,\"user_id\":48,\"username\":\"perf_user_02\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_03",
+        "status_code": 200,
+        "latency_ms": 390.6310000002122,
+        "body": "{\"id\":83,\"room_id\":43,\"user_id\":49,\"username\":\"perf_user_03\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_04",
+        "status_code": 200,
+        "latency_ms": 347.60629999982484,
+        "body": "{\"id\":79,\"room_id\":44,\"user_id\":50,\"username\":\"perf_user_04\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_05",
+        "status_code": 200,
+        "latency_ms": 351.6892999996344,
+        "body": "{\"id\":80,\"room_id\":45,\"user_id\":51,\"username\":\"perf_user_05\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_06",
+        "status_code": 200,
+        "latency_ms": 371.9480999998268,
+        "body": "{\"id\":82,\"room_id\":46,\"user_id\":52,\"username\":\"perf_user_06\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_07",
+        "status_code": 200,
+        "latency_ms": 292.44699999981094,
+        "body": "{\"id\":76,\"room_id\":47,\"user_id\":53,\"username\":\"perf_user_07\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_08",
+        "status_code": 200,
+        "latency_ms": 416.86550000031275,
+        "body": "{\"id\":85,\"room_id\":48,\"user_id\":54,\"username\":\"perf_user_08\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_09",
+        "status_code": 200,
+        "latency_ms": 230.72330000013608,
+        "body": "{\"id\":72,\"room_id\":49,\"user_id\":55,\"username\":\"perf_user_09\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_10",
+        "status_code": 200,
+        "latency_ms": 463.50840000013704,
+        "body": "{\"id\":88,\"room_id\":50,\"user_id\":56,\"username\":\"perf_user_10\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_11",
+        "status_code": 200,
+        "latency_ms": 384.61610000013025,
+        "body": "{\"id\":84,\"room_id\":51,\"user_id\":57,\"username\":\"perf_user_11\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_12",
+        "status_code": 200,
+        "latency_ms": 290.72180000002845,
+        "body": "{\"id\":77,\"room_id\":52,\"user_id\":58,\"username\":\"perf_user_12\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_13",
+        "status_code": 200,
+        "latency_ms": 236.22469999918394,
+        "body": "{\"id\":73,\"room_id\":53,\"user_id\":59,\"username\":\"perf_user_13\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_14",
+        "status_code": 200,
+        "latency_ms": 430.32339999990654,
+        "body": "{\"id\":87,\"room_id\":54,\"user_id\":60,\"username\":\"perf_user_14\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_15",
+        "status_code": 200,
+        "latency_ms": 462.5655999998344,
+        "body": "{\"id\":89,\"room_id\":55,\"user_id\":61,\"username\":\"perf_user_15\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_16",
+        "status_code": 200,
+        "latency_ms": 243.24450000040088,
+        "body": "{\"id\":74,\"room_id\":56,\"user_id\":62,\"username\":\"perf_user_16\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_17",
+        "status_code": 200,
+        "latency_ms": 401.4828999997917,
+        "body": "{\"id\":86,\"room_id\":57,\"user_id\":63,\"username\":\"perf_user_17\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_18",
+        "status_code": 200,
+        "latency_ms": 321.6207999994367,
+        "body": "{\"id\":81,\"room_id\":58,\"user_id\":64,\"username\":\"perf_user_18\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_19",
+        "status_code": 200,
+        "latency_ms": 292.5444000002244,
+        "body": "{\"id\":78,\"room_id\":59,\"user_id\":65,\"username\":\"perf_user_19\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      },
+      {
+        "username": "perf_user_20",
+        "status_code": 200,
+        "latency_ms": 243.8190000002578,
+        "body": "{\"id\":75,\"room_id\":60,\"user_id\":66,\"username\":\"perf_user_20\",\"status\":\"PENDING\",\"created_at\":\"2026-10-24T02:53:29\"}",
+        "error": null
+      }
+    ],
+    "stage_name": "Multi-Room Stage 4 (20 Users)",
+    "num_users": 20
+  }
+]

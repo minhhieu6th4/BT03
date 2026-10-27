@@ -19,6 +19,8 @@ from backend.schemas.tournament import (
     MatchConfigUpdateRequest, SetupOverviewMatch, SetupOverviewResponse
 )
 
+MAX_CONCURRENT_MATCHES_PER_WAVE = 5
+
 
 class TournamentService:
     @staticmethod
@@ -522,13 +524,13 @@ class TournamentService:
             round_1_matches.append(m)
             current_match_order += 1
 
-        # Cặp thi đấu thật ở vòng 1: Mỗi wave tối đa 10 trận đấu song song
+        # Cặp thi đấu thật ở vòng 1: Mỗi wave tối đa 5 trận đấu song song
         real_idx = 0
         for i in range(0, len(non_bye_participants), 2):
             p1 = non_bye_participants[i]
             p2 = non_bye_participants[i+1] if (i+1) < len(non_bye_participants) else None
             is_bye_match = (p2 is None)
-            wave_num = 1 if is_bye_match else ((real_idx // 10) + 1)
+            wave_num = 1 if is_bye_match else ((real_idx // MAX_CONCURRENT_MATCHES_PER_WAVE) + 1)
             if not is_bye_match:
                 real_idx += 1
 
@@ -567,7 +569,7 @@ class TournamentService:
                     tournament_id=t.id,
                     round_id=cur_round.id,
                     match_order=m_ord,
-                    wave_number=(m_ord // 10) + 1,
+                    wave_number=(m_ord // MAX_CONCURRENT_MATCHES_PER_WAVE) + 1,
                     player1_id=None,
                     player2_id=None,
                     winner_id=None,
@@ -1090,12 +1092,12 @@ class TournamentService:
                         next_round.status = "IN_PROGRESS"
                         next_round.current_wave = 1
 
-                        # Kích hoạt các trận ở vòng tiếp theo (Wave 1 tối đa 10 trận)
+                        # Kích hoạt các trận ở vòng tiếp theo (Wave 1 tối đa 5 trận)
                         next_matches = db.query(TournamentMatch).filter(TournamentMatch.round_id == next_round.id).order_by(TournamentMatch.match_order.asc()).all()
                         real_idx = 0
                         for nm in next_matches:
                             if nm.player1_id and nm.player2_id:
-                                nm.wave_number = (real_idx // 10) + 1
+                                nm.wave_number = (real_idx // MAX_CONCURRENT_MATCHES_PER_WAVE) + 1
                                 real_idx += 1
                                 if nm.wave_number == 1:
                                     nm.status = "READY"
